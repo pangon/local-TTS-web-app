@@ -2,7 +2,7 @@
 
 **Category**: Environment
 
-**Status**: Unverified
+**Status**: Verified
 
 **Risk if wrong**: Low — users could sideload model files manually via file system; the application would still function once models are cached locally.
 

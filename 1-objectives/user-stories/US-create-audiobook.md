@@ -2,7 +2,7 @@
 
 **As a** end user, **I want** to upload a .txt file and have it converted into an audiobook, **so that** I can listen to text content without relying on a cloud service.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 

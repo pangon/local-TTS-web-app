@@ -2,7 +2,7 @@
 
 **Description**: Support open-weight models from HuggingFace, loaded on-demand rather than pre-bundled. Users can choose from available models and the system handles downloading, caching, and loading them locally.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 
@@ -17,4 +17,4 @@
 ## Related Artifacts
 
 - User stories: [US-select-tts-model](../user-stories/US-select-tts-model.md), [US-manage-models](../user-stories/US-manage-models.md)
-- Requirements: _none yet_
+- Requirements: [REQ-F-model-listing](../requirements/REQ-F-model-listing.md), [REQ-F-model-download](../requirements/REQ-F-model-download.md), [REQ-F-model-cache-view](../requirements/REQ-F-model-cache-view.md), [REQ-F-model-delete](../requirements/REQ-F-model-delete.md)

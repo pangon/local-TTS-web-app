@@ -16,7 +16,7 @@ Several open-weight TTS models are currently available on HuggingFace, including
 
 ## Verification Plan
 
-Survey HuggingFace for TTS models that meet the following criteria: (1) open-weight license, (2) fit in 4 GB VRAM, (3) produce natural-sounding speech, (4) support English at minimum. Document at least two viable candidates with benchmark results.
+Survey HuggingFace for TTS models that meet the following criteria: (1) open-weight license, (2) fit in 4 GB VRAM, (3) produce natural-sounding speech, (4) support Italian at minimum. Document at least two viable candidates with benchmark results.
 
 ## Related Artifacts
 

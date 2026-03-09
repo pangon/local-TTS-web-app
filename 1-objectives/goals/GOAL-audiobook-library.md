@@ -2,7 +2,7 @@
 
 **Description**: Browse, play, and manage generated audiobooks from the web interface. Users should have a library view of all their audiobooks and be able to resume listening where they left off.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 
@@ -18,4 +18,4 @@
 ## Related Artifacts
 
 - User stories: [US-browse-audiobook-library](../user-stories/US-browse-audiobook-library.md), [US-play-audiobook](../user-stories/US-play-audiobook.md), [US-download-audiobook](../user-stories/US-download-audiobook.md), [US-delete-audiobook](../user-stories/US-delete-audiobook.md)
-- Requirements: _none yet_
+- Requirements: [REQ-F-library-listing](../requirements/REQ-F-library-listing.md), [REQ-F-audiobook-playback](../requirements/REQ-F-audiobook-playback.md), [REQ-F-playback-resume](../requirements/REQ-F-playback-resume.md), [REQ-F-download-audiobook](../requirements/REQ-F-download-audiobook.md), [REQ-F-delete-audiobook](../requirements/REQ-F-delete-audiobook.md)

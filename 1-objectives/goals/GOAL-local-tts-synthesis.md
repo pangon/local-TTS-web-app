@@ -2,7 +2,7 @@
 
 **Description**: Convert text to speech entirely on the local machine, with no external API calls. This is the core value proposition — privacy and independence from cloud services.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 
@@ -17,4 +17,4 @@
 ## Related Artifacts
 
 - User stories: [US-create-audiobook](../user-stories/US-create-audiobook.md), [US-synthesize-text-input](../user-stories/US-synthesize-text-input.md)
-- Requirements: _none yet_
+- Requirements: [REQ-F-gpu-validation](../requirements/REQ-F-gpu-validation.md), [REQ-COMP-foss-only](../requirements/REQ-COMP-foss-only.md)

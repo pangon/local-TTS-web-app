@@ -2,7 +2,7 @@
 
 **Description**: Make the application simple to install and run locally with minimal configuration. A self-hoster should be able to get the app running quickly without deep technical expertise.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 
@@ -17,4 +17,4 @@
 ## Related Artifacts
 
 - User stories: [US-deploy-app](../user-stories/US-deploy-app.md)
-- Requirements: _none yet_
+- Requirements: [REQ-PORT-linux-windows](../requirements/REQ-PORT-linux-windows.md)

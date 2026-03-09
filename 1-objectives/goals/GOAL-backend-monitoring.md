@@ -2,7 +2,7 @@
 
 **Description**: Expose detailed information about local backend processing through the web interface. Users and operators can monitor what the system is doing, track job progress, and diagnose issues.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 
@@ -17,4 +17,4 @@
 ## Related Artifacts
 
 - User stories: [US-monitor-jobs](../user-stories/US-monitor-jobs.md)
-- Requirements: _none yet_
+- Requirements: [REQ-F-job-monitoring](../requirements/REQ-F-job-monitoring.md), [REQ-F-resource-monitoring](../requirements/REQ-F-resource-monitoring.md)

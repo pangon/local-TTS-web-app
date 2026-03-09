@@ -2,7 +2,7 @@
 
 **Description**: Use this project as a proving ground to validate the feasibility of running AI models locally and exposing them through a web interface. If the approach proves viable, the solution should be organized so that the AI execution layer can be easily extracted and reused in a larger project.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 
@@ -18,4 +18,4 @@
 ## Related Artifacts
 
 - User stories: [US-evaluate-local-ai](../user-stories/US-evaluate-local-ai.md)
-- Requirements: _none yet_
+- Requirements: [REQ-F-performance-logging](../requirements/REQ-F-performance-logging.md), [REQ-MNT-modular-ai-layer](../requirements/REQ-MNT-modular-ai-layer.md)

@@ -2,11 +2,11 @@
 
 **Type**: Portability
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 
-**Source**: [GOAL-easy-deployment](../goals/GOAL-easy-deployment.md)
+**Source**: [GOAL-easy-deployment](../goals/GOAL-easy-deployment.md), [US-deploy-app](../user-stories/US-deploy-app.md)
 
 **Source stakeholder**: [STK-self-hoster](../stakeholders.md)
 

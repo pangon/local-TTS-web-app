@@ -21,3 +21,7 @@ This is a personal project driven by one person. All design and technology choic
 - Favor simple, well-documented tooling with low maintenance overhead.
 - Scope must remain realistic for one person — avoid features that require significant ongoing maintenance.
 - No formal code review process; rely on automated checks (linting, tests) for quality.
+
+## Related Artifacts
+
+- [REQ-USA-simple-setup](../requirements/REQ-USA-simple-setup.md) — simple setup aligns with solo-developer bandwidth

@@ -2,7 +2,7 @@
 
 **As a** end user, **I want** to browse available HuggingFace TTS models and select one to use, **so that** I can choose the model that best suits my quality and performance needs.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 

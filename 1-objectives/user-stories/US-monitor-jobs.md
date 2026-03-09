@@ -2,7 +2,7 @@
 
 **As a** self-hoster, **I want** to view the status of ongoing TTS jobs and system resource usage, **so that** I can verify the backend is healthy and diagnose issues.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 

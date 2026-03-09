@@ -2,7 +2,7 @@
 
 **Description**: Produce natural-sounding speech output that is comfortable to listen to. The quality of synthesized audio is a key factor in user satisfaction and adoption.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 
@@ -18,4 +18,4 @@
 ## Related Artifacts
 
 - User stories: [US-select-voice](../user-stories/US-select-voice.md)
-- Requirements: _none yet_
+- Requirements: [REQ-F-default-voice-quality](../requirements/REQ-F-default-voice-quality.md)

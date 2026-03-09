@@ -2,7 +2,7 @@
 
 **Category**: User
 
-**Status**: Unverified
+**Status**: Verified
 
 **Risk if wrong**: Medium — wrong encoding produces garbled text in the audiobook; excessively large files could exhaust memory or make synthesis take unreasonably long
 

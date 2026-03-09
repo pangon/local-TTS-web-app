@@ -2,7 +2,7 @@
 
 **Category**: Environment
 
-**Status**: Unverified
+**Status**: Verified
 
 **Risk if wrong**: High — the application would be unusable without a compatible GPU; users without one cannot run TTS inference at all.
 

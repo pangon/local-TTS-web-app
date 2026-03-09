@@ -2,7 +2,7 @@
 
 **As a** end user, **I want** to browse a library of my generated audiobooks, **so that** I can find and access any audiobook I've created.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 

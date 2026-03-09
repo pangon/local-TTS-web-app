@@ -2,7 +2,7 @@
 
 **Description**: Create complete audiobooks from text files (txt), processing the full document into audio. This extends basic TTS into a batch workflow that produces persistent, replayable audio content.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 
@@ -18,4 +18,4 @@
 ## Related Artifacts
 
 - User stories: [US-create-audiobook](../user-stories/US-create-audiobook.md)
-- Requirements: _none yet_
+- Requirements: [REQ-F-upload-text-file](../requirements/REQ-F-upload-text-file.md), [REQ-F-synthesize-audiobook](../requirements/REQ-F-synthesize-audiobook.md), [REQ-F-chapter-split-output](../requirements/REQ-F-chapter-split-output.md), [REQ-F-synthesis-progress](../requirements/REQ-F-synthesis-progress.md), [REQ-F-disk-space-preflight](../requirements/REQ-F-disk-space-preflight.md), [REQ-PERF-synthesis-latency](../requirements/REQ-PERF-synthesis-latency.md)

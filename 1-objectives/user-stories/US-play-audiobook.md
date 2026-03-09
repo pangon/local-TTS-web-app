@@ -2,7 +2,7 @@
 
 **As a** end user, **I want** to play an audiobook from the library and resume where I left off, **so that** I don't lose my place between sessions.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 

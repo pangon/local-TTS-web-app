@@ -2,7 +2,7 @@
 
 **As a** self-hoster, **I want** to view cached models and their disk usage and delete models I no longer need, **so that** I can control storage consumption.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 

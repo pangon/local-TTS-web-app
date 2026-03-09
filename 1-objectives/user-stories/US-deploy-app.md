@@ -2,7 +2,7 @@
 
 **As a** self-hoster, **I want** to install and run the application with minimal commands and configuration, **so that** I can get started quickly without deep technical expertise.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 
@@ -21,3 +21,4 @@
 ## Derived Requirements
 
 - [REQ-USA-simple-setup](../requirements/REQ-USA-simple-setup.md) — Simple setup and startup
+- [REQ-PORT-linux-windows](../requirements/REQ-PORT-linux-windows.md) — Linux and Windows runtime portability

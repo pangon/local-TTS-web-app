@@ -2,7 +2,7 @@
 
 **As a** end user, **I want** to type or paste text into a field in the web UI and hear it synthesized, **so that** I can quickly test voices and models without creating an audiobook from a file.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 

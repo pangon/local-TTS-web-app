@@ -2,7 +2,7 @@
 
 **As a** end user, **I want** to delete audiobooks from the library, **so that** I can free up storage space.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 

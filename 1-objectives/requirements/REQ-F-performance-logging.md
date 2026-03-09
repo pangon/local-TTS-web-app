@@ -2,7 +2,7 @@
 
 **Type**: Functional
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 
@@ -12,9 +12,9 @@
 
 ## Description
 
-The system shall record performance metrics (latency, resource usage) for each synthesis run, accessible for review. Lessons learned (feasibility, limitations, trade-offs) shall be documented as part of the project evaluation.
+The system shall record performance metrics (latency, resource usage) for each synthesis run, accessible for review.
 
 ## Acceptance Criteria
 
 - Given a synthesis run completes, then performance metrics (latency, resource usage) are recorded and retrievable
-- Given the evaluation is complete, then lessons learned (feasibility, limitations, trade-offs) are documented for informing future projects
+- Given recorded metrics, when the user accesses them, then they are presented in a readable format (e.g., log file or UI view)

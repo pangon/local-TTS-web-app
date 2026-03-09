@@ -2,7 +2,7 @@
 
 **As a** end user, **I want** to select a voice and output language before generating an audiobook, **so that** the result sounds natural and matches the language of my text.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 

@@ -19,3 +19,8 @@ Self-hosters use a variety of operating systems. Supporting Linux and Windows co
 - Dependencies must be available on both Linux and Windows (or have platform-specific alternatives).
 - Installation and startup scripts must work on both platforms or provide OS-specific variants.
 - File paths, process management, and system calls must avoid OS-specific assumptions between Linux and Windows.
+
+## Related Artifacts
+
+- [REQ-PORT-linux-windows](../requirements/REQ-PORT-linux-windows.md) — runtime portability across Linux and Windows
+- [REQ-USA-simple-setup](../requirements/REQ-USA-simple-setup.md) — setup process works on both platforms

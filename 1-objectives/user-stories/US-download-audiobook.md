@@ -2,7 +2,7 @@
 
 **As a** end user, **I want** to download an audiobook from the library, **so that** I can listen to it outside the application.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 

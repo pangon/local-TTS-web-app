@@ -20,3 +20,9 @@ TTS models require significant compute for real-time or near-real-time audio gen
 - The deployment environment must include a compatible dedicated GPU.
 - Framework and runtime choices must support GPU execution (e.g., CUDA-based inference).
 - Users without a dedicated GPU cannot use the application.
+
+## Related Artifacts
+
+- [REQ-F-gpu-validation](../requirements/REQ-F-gpu-validation.md) — verifies GPU/CUDA availability on startup
+- [REQ-F-synthesize-audiobook](../requirements/REQ-F-synthesize-audiobook.md) — all inference runs on GPU
+- [REQ-PERF-synthesis-latency](../requirements/REQ-PERF-synthesis-latency.md) — latency thresholds assume GPU execution

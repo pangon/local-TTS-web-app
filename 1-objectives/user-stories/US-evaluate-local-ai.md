@@ -2,7 +2,7 @@
 
 **As a** developer, **I want** to run a TTS model end-to-end through the web interface and review documented performance data, **so that** I can assess whether local AI execution is viable for broader use.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 

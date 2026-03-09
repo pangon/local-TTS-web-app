@@ -2,7 +2,7 @@
 
 **Description**: Provide a clean, intuitive browser-based interface for text-to-speech conversion. Users interact with the system through a web page served locally.
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Must-have
 
@@ -17,4 +17,4 @@
 ## Related Artifacts
 
 - User stories: [US-create-audiobook](../user-stories/US-create-audiobook.md), [US-download-audiobook](../user-stories/US-download-audiobook.md), [US-synthesize-text-input](../user-stories/US-synthesize-text-input.md)
-- Requirements: _none yet_
+- Requirements: [REQ-PORT-browser-compat](../requirements/REQ-PORT-browser-compat.md)

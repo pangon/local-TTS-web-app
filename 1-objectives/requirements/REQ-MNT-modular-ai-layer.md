@@ -2,7 +2,7 @@
 
 **Type**: Maintainability
 
-**Status**: Draft
+**Status**: Approved
 
 **Priority**: Should-have
 

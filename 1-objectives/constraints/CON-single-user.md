@@ -20,3 +20,7 @@ The target use case is a personal tool for local TTS and audiobook creation. Des
 - Job queue can be simple (sequential or single-concurrent) — no fairness or priority scheduling required.
 - Storage management does not need per-user quotas.
 - The UI does not need session management or user switching.
+
+## Related Artifacts
+
+- [REQ-SEC-localhost-binding](../requirements/REQ-SEC-localhost-binding.md) — binds to localhost by default, no multi-user network access

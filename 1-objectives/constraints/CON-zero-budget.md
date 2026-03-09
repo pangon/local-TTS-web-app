@@ -21,3 +21,7 @@ The project exists to avoid recurring costs for cloud TTS services. The develope
 - All libraries and frameworks must be free and open-source.
 - Hosting is exclusively on the developer's own machine — no cloud infrastructure costs.
 - Reinforces GOAL-local-tts-synthesis and GOAL-huggingface-models.
+
+## Related Artifacts
+
+- [REQ-COMP-foss-only](../requirements/REQ-COMP-foss-only.md) — all dependencies free and open-source
