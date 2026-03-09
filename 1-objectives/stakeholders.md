@@ -12,6 +12,6 @@ Everyone with a stake in the system: those who use it, fund it, maintain it, or 
 
 | ID | Role | Description | Interests | Influence |
 |----|------|-------------|-----------|-----------|
-| STK-placeholder | Placeholder Role | Replace with your first stakeholder | What they care about | High / Medium / Low |
-<!-- Replace the placeholder row with your actual stakeholders. -->
-<!-- ID format: STK-kebab-name (e.g., STK-end-user, STK-product-owner) -->
+| STK-end-user | End User | Person using the browser interface to convert text to speech | Easy-to-use interface, high-quality audio output, fast synthesis, privacy (no cloud dependency) | High |
+| STK-self-hoster | Self-Hoster / Operator | Person deploying and running the app locally; may be the same as the end user or a sysadmin | Simple installation, low resource usage, clear configuration, reliable operation | High |
+| STK-developer | Developer | Contributor maintaining or extending the codebase | Clean architecture, good documentation, easy local dev setup, testability | Medium |

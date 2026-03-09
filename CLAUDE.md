@@ -6,13 +6,13 @@
 
 ## Project Overview
 
-<!-- Replace this section with a description of your project. -->
+**Local TTS Web App** — A web application that provides text-to-speech functionality running locally. It allows users to convert text into spoken audio through a browser-based interface without relying on external cloud services.
 
 This repository uses a structured, AI-first development lifecycle. All project knowledge — objectives, design, decisions, tasks — lives alongside the source code. See [README.md](README.md) for the full directory layout.
 
 ### Current State
 
-The project is just the base scaffold, and has not yet been inizialized. The repository contains the AI SDLC framework (phase directories, templates, automation skills) ready to be populated starting from the Objectives phase, after the inizialization has been done.
+The project is in the Objectives phase. Stakeholders defined; 10 Goals drafted (including GOAL-quick-tts-preview); 12 User Stories drafted (including US-synthesize-text-input); 24 Requirements drafted (14 Must-have, 10 Should-have); 6 Constraints created (CON-gpu-inference, CON-nvidia-gpu, CON-cross-platform, CON-single-user, CON-solo-developer, CON-zero-budget); 5 Assumptions created (ASM-user-has-nvidia-gpu, ASM-huggingface-models-available, ASM-internet-for-model-download, ASM-text-file-format, ASM-browser-mp3-playback). Gap analysis (2026-03-09): 0 Critical, 1 Important, 0 Minor (stale — artifacts changed since).
 
 ---
 

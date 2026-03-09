@@ -34,6 +34,7 @@ Objectives artifacts form a traceability chain. Each level should decompose into
 1. **Stakeholder → Goals** — every stakeholder should have at least one associated goal. A stakeholder with no goals has no defined value proposition in the project.
 2. **Goal → User Stories** — every goal should have at least one associated user story. Review the linked user stories against the goal's success criteria and flag coverage gaps.
 3. **User Story → Requirements** — every user story should have at least one associated requirement. Review the linked requirements against the story's acceptance criteria and flag obvious coverage gaps.
+4. **Constraint → Requirements** — constraints may also generate requirements directly (e.g., a compliance constraint produces a compliance requirement, a technology constraint produces a compatibility requirement). When a constraint implies a verifiable obligation, derive a requirement from it and link both.
 
 These relationships are **traceability links with a coverage review heuristic**: check that linked artifacts appear to address the parent's success/acceptance criteria, and surface gaps for the user to evaluate. Completeness is a judgment call that requires domain expertise — the agent flags potential gaps, the human decides whether coverage is adequate.
 
@@ -44,11 +45,12 @@ Elicitation is iterative — artifacts of different types often emerge together 
 That said, there is a **recommended starting sequence** for greenfield projects, because later artifacts depend on earlier ones:
 
 1. **Stakeholders** — update `1-objectives/stakeholders.md` with new entries (`STK-kebab-name`).
-2. **Goals** — create `GOAL-<kebab-name>.md` from `1-objectives/goals/_template.md`.
-3. **User Stories** — create `US-<kebab-name>.md` from `1-objectives/user-stories/_template.md`.
-4. **Requirements** — create `REQ-<CLASS>-<kebab-name>.md` from `1-objectives/requirements/_template.md`.
+2. **Constraints** — create `CON-<kebab-name>.md` from `1-objectives/constraints/_template.md`. Constraints — especially **business** constraints (budget, timeline, team size) and **operational** constraints (hosting, compliance) — should be captured early because they shape which goals are realistic, which user stories are in scope, and how requirements are specified. Proactively ask the user about known constraints across all categories (technical, business, operational) before moving to goals.
+3. **Goals** — create `GOAL-<kebab-name>.md` from `1-objectives/goals/_template.md`.
+4. **User Stories** — create `US-<kebab-name>.md` from `1-objectives/user-stories/_template.md`.
+5. **Requirements** — create `REQ-<CLASS>-<kebab-name>.md` from `1-objectives/requirements/_template.md`.
 
-**Assumptions** and **Constraints** have no fixed position — capture them whenever they surface during discussion. Create `ASM-<kebab-name>.md` from `1-objectives/assumptions/_template.md` and `CON-<kebab-name>.md` from `1-objectives/constraints/_template.md`.
+**Assumptions** have no fixed position — capture them whenever they surface during discussion. Create `ASM-<kebab-name>.md` from `1-objectives/assumptions/_template.md`. Additional **Constraints** may also emerge later — capture them immediately and review whether existing goals or user stories need to be adjusted.
 
 The only hard prerequisite: **at least one stakeholder must exist before creating goals, user stories, or requirements**, since these artifacts require a source stakeholder link.
 
@@ -58,12 +60,13 @@ You do not have to cover all artifact types in a single session. Work through wh
 
 The agent should actively suggest artifacts based on context:
 
-- **After identifying a stakeholder**: suggest goals that align with their interests.
-- **After creating a goal**: suggest assumptions that underpin it, constraints that limit it, and user stories that would realize it.
+- **After identifying a stakeholder**: prompt for known constraints (business, technical, operational) before suggesting goals.
+- **After creating a constraint**: flag any existing goals or user stories that may conflict with or be limited by the new constraint. Suggest adjustments if needed. If the constraint implies a verifiable obligation, suggest deriving a requirement from it.
+- **After creating a goal**: suggest assumptions that underpin it, additional constraints that may limit it, and user stories that would realize it.
 - **After creating a user story**: suggest requirements that formalize the acceptance criteria, and assumptions about user behavior or technical feasibility.
 - **After creating an assumption**: suggest a verification plan and flag any existing artifacts that depend on it.
 - **After creating a requirement**: suggest related requirements (e.g., a performance requirement to complement a functional one), and constraints that could affect implementation.
-- **When reviewing existing artifacts**: suggest gaps — missing traceability links, uncovered stakeholder needs, requirements without corresponding user stories, etc.
+- **When reviewing existing artifacts**: suggest gaps — missing traceability links, uncovered stakeholder needs, requirements without corresponding user stories, constraints not reflected in requirements, etc.
 
 Present suggestions as options the user can accept, modify, or decline. Do not create suggested artifacts without explicit user confirmation.
 
@@ -75,7 +78,7 @@ When drafting a requirement to propose to the user, check it against these crite
 - **Unambiguous** — there should be only one reasonable interpretation. Flag terms that different stakeholders could read differently (e.g., "large file", "real-time", "most users").
 - **Consistent** — the requirement must not conflict with any existing requirement or constraint. Check against the current artifact set and flag contradictions.
 - **Feasible** — if known constraints make the requirement unrealistic, flag the tension (e.g., a latency target that conflicts with a mandated third-party API).
-- **Traceable** — the requirement must link to a source user story or goal.
+- **Traceable** — the requirement must link to a source user story, goal, or constraint.
 
 Do not announce a "validation step" — apply these criteria silently while drafting. If any criterion fails, include an inline note in the proposal (e.g., _"Note: 'handle large files' is ambiguous — consider specifying a size threshold."_). The user can refine, accept as-is, or dismiss the note.
 
@@ -117,7 +120,7 @@ Summarize the assessment before the detailed gap list: state whether the current
 
 Check for:
 
-- **Missing traceability** — goals without user stories, user stories without requirements, requirements without a source goal or story.
+- **Missing traceability** — goals without user stories, user stories without requirements, constraints that imply obligations but have no derived requirements, requirements without a source goal, story, or constraint.
 - **Potential coverage gaps** — a goal whose linked user stories do not appear to address all its success criteria, or a user story whose linked requirements do not appear to cover all its acceptance criteria. Flag these as potential gaps for the user to evaluate.
 - **Uncovered stakeholders** — stakeholders with no goals addressing their needs.
 - **Orphaned artifacts** — requirements or assumptions that reference deleted or renamed artifacts.

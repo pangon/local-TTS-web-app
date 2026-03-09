@@ -84,7 +84,16 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 
 | File | Priority | Status | Summary |
 |------|----------|--------|---------|
-<!-- Add rows as goals are created. File column: [GOAL-kebab-name](goals/GOAL-kebab-name.md) -->
+| [GOAL-local-tts-synthesis](goals/GOAL-local-tts-synthesis.md) | Must-have | Draft | Convert text to speech entirely locally, no external API calls |
+| [GOAL-browser-ui](goals/GOAL-browser-ui.md) | Must-have | Draft | Clean, intuitive browser-based interface for TTS conversion |
+| [GOAL-easy-deployment](goals/GOAL-easy-deployment.md) | Should-have | Draft | Simple installation and operation with minimal configuration |
+| [GOAL-audio-quality](goals/GOAL-audio-quality.md) | Should-have | Draft | Natural-sounding speech output with multiple voice options |
+| [GOAL-audiobook-creation](goals/GOAL-audiobook-creation.md) | Must-have | Draft | Create complete audiobooks from text files (txt) |
+| [GOAL-audiobook-library](goals/GOAL-audiobook-library.md) | Must-have | Draft | Browse, play, resume, and delete audiobooks from the web interface |
+| [GOAL-backend-monitoring](goals/GOAL-backend-monitoring.md) | Should-have | Draft | Monitor backend processing jobs and resources from the UI |
+| [GOAL-validate-local-ai-execution](goals/GOAL-validate-local-ai-execution.md) | Should-have | Draft | Validate local AI model execution via web interface; ensure reusability |
+| [GOAL-huggingface-models](goals/GOAL-huggingface-models.md) | Must-have | Draft | Support open-weight HuggingFace models loaded on-demand |
+| [GOAL-quick-tts-preview](goals/GOAL-quick-tts-preview.md) | Should-have | Draft | Quick TTS from direct text input for voice/model previews |
 
 ---
 
@@ -92,7 +101,18 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 
 | File | Role | Priority | Status | Summary |
 |------|------|----------|--------|---------|
-<!-- Add rows as user stories are created. File column: [US-kebab-name](user-stories/US-kebab-name.md) -->
+| [US-create-audiobook](user-stories/US-create-audiobook.md) | STK-end-user | Must-have | Draft | Upload .txt file and convert it into an audiobook locally |
+| [US-browse-audiobook-library](user-stories/US-browse-audiobook-library.md) | STK-end-user | Must-have | Draft | Browse library of generated audiobooks |
+| [US-play-audiobook](user-stories/US-play-audiobook.md) | STK-end-user | Must-have | Draft | Play audiobook from library with resume support |
+| [US-download-audiobook](user-stories/US-download-audiobook.md) | STK-end-user | Should-have | Draft | Download audiobook files from the library |
+| [US-delete-audiobook](user-stories/US-delete-audiobook.md) | STK-end-user | Must-have | Draft | Delete audiobooks to free storage space |
+| [US-select-voice](user-stories/US-select-voice.md) | STK-end-user | Should-have | Draft | Select voice and output language before generating an audiobook |
+| [US-select-tts-model](user-stories/US-select-tts-model.md) | STK-end-user | Must-have | Draft | Browse and select a HuggingFace TTS model to use |
+| [US-monitor-jobs](user-stories/US-monitor-jobs.md) | STK-self-hoster | Should-have | Draft | View status of TTS jobs and system resource usage |
+| [US-deploy-app](user-stories/US-deploy-app.md) | STK-self-hoster | Should-have | Draft | Install and run the app with minimal commands and configuration |
+| [US-evaluate-local-ai](user-stories/US-evaluate-local-ai.md) | STK-developer | Should-have | Draft | Run TTS end-to-end locally and review performance data |
+| [US-manage-models](user-stories/US-manage-models.md) | STK-self-hoster | Should-have | Draft | View cached models and disk usage, delete unneeded models |
+| [US-synthesize-text-input](user-stories/US-synthesize-text-input.md) | STK-end-user | Should-have | Draft | Type or paste text and hear ephemeral TTS preview |
 
 ---
 
@@ -100,7 +120,30 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 
 | File | Type | Priority | Status | Summary |
 |------|------|----------|--------|---------|
-<!-- Add rows as requirements are created. File column: [REQ-CLASS-kebab-name](requirements/REQ-CLASS-kebab-name.md) -->
+| [REQ-F-upload-text-file](requirements/REQ-F-upload-text-file.md) | Functional | Must-have | Draft | Accept .txt file uploads (UTF-8, ≤ 2 MB) via browser UI |
+| [REQ-F-synthesize-audiobook](requirements/REQ-F-synthesize-audiobook.md) | Functional | Must-have | Draft | Convert full text to MP3 locally on GPU; no external calls |
+| [REQ-F-chapter-split-output](requirements/REQ-F-chapter-split-output.md) | Functional | Must-have | Draft | Produce one MP3 per chapter; single file if no chapters detected |
+| [REQ-F-synthesis-progress](requirements/REQ-F-synthesis-progress.md) | Functional | Must-have | Draft | Show job status and progress indicator during synthesis |
+| [REQ-F-disk-space-preflight](requirements/REQ-F-disk-space-preflight.md) | Functional | Must-have | Draft | Check disk space before synthesis; block with error if insufficient |
+| [REQ-F-library-listing](requirements/REQ-F-library-listing.md) | Functional | Must-have | Draft | Display list of audiobooks with title, creation date, chapter count |
+| [REQ-F-audiobook-playback](requirements/REQ-F-audiobook-playback.md) | Functional | Must-have | Draft | Play audiobook in browser with chapter navigation |
+| [REQ-F-playback-resume](requirements/REQ-F-playback-resume.md) | Functional | Must-have | Draft | Persist and resume playback position across sessions |
+| [REQ-F-delete-audiobook](requirements/REQ-F-delete-audiobook.md) | Functional | Must-have | Draft | Delete audiobook and audio files after user confirmation |
+| [REQ-F-model-listing](requirements/REQ-F-model-listing.md) | Functional | Must-have | Draft | List compatible HuggingFace TTS models with cache status |
+| [REQ-F-model-download](requirements/REQ-F-model-download.md) | Functional | Must-have | Draft | Download, cache, and load models with progress and disk check |
+| [REQ-F-download-audiobook](requirements/REQ-F-download-audiobook.md) | Functional | Should-have | Draft | Download audiobook audio files in MP3 format |
+| [REQ-F-voice-language-selection](requirements/REQ-F-voice-language-selection.md) | Functional | Should-have | Draft | Select voice and language before synthesis; sensible defaults |
+| [REQ-F-job-monitoring](requirements/REQ-F-job-monitoring.md) | Functional | Should-have | Draft | Display TTS job status, progress, and error details |
+| [REQ-F-resource-monitoring](requirements/REQ-F-resource-monitoring.md) | Functional | Should-have | Draft | Display CPU, memory, GPU usage and loaded model info |
+| [REQ-USA-simple-setup](requirements/REQ-USA-simple-setup.md) | Usability | Should-have | Draft | Run in ≤ 5 commands, no config editing, shows URL on startup |
+| [REQ-F-performance-logging](requirements/REQ-F-performance-logging.md) | Functional | Should-have | Draft | Record synthesis performance metrics per run |
+| [REQ-MNT-modular-ai-layer](requirements/REQ-MNT-modular-ai-layer.md) | Maintainability | Should-have | Draft | AI layer with clear interfaces; extractable as standalone |
+| [REQ-F-model-cache-view](requirements/REQ-F-model-cache-view.md) | Functional | Should-have | Draft | Display cached models with name and disk size |
+| [REQ-F-model-delete](requirements/REQ-F-model-delete.md) | Functional | Should-have | Draft | Delete cached models; prevent deletion of loaded model |
+| [REQ-F-text-preview](requirements/REQ-F-text-preview.md) | Functional | Should-have | Draft | Ephemeral TTS preview from text input field |
+| [REQ-F-gpu-validation](requirements/REQ-F-gpu-validation.md) | Functional | Must-have | Draft | Verify NVIDIA GPU/CUDA on startup; check VRAM before model load |
+| [REQ-PORT-linux-windows](requirements/REQ-PORT-linux-windows.md) | Portability | Must-have | Draft | Run on Linux and Windows without platform-specific workarounds |
+| [REQ-COMP-foss-only](requirements/REQ-COMP-foss-only.md) | Compliance | Must-have | Draft | All dependencies free and open-source; no paid components |
 
 ---
 
@@ -108,7 +151,11 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 
 | File | Category | Status | Risk | Summary |
 |------|----------|--------|------|---------|
-<!-- Add rows as assumptions are created. File column: [ASM-kebab-name](assumptions/ASM-kebab-name.md) -->
+| [ASM-user-has-nvidia-gpu](assumptions/ASM-user-has-nvidia-gpu.md) | Environment | Unverified | High | Users have an NVIDIA GPU with at least 4 GB VRAM |
+| [ASM-huggingface-models-available](assumptions/ASM-huggingface-models-available.md) | Technology | Unverified | High | Suitable open-weight TTS models exist on HuggingFace |
+| [ASM-internet-for-model-download](assumptions/ASM-internet-for-model-download.md) | Environment | Unverified | Low | Internet available for initial model download; synthesis is offline |
+| [ASM-text-file-format](assumptions/ASM-text-file-format.md) | User | Unverified | Medium | Users upload UTF-8 .txt files up to ~2 MB |
+| [ASM-browser-mp3-playback](assumptions/ASM-browser-mp3-playback.md) | Technology | Unverified | Low | Target browsers can natively play MP3 audio |
 
 ---
 
@@ -116,4 +163,9 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 
 | File | Category | Status | Summary |
 |------|----------|--------|---------|
-<!-- Add rows as constraints are created. File column: [CON-kebab-name](constraints/CON-kebab-name.md) -->
+| [CON-gpu-inference](constraints/CON-gpu-inference.md) | Technical | Active | All TTS inference must run on a dedicated GPU |
+| [CON-nvidia-gpu](constraints/CON-nvidia-gpu.md) | Technical | Active | Only NVIDIA GPUs (CUDA) supported |
+| [CON-cross-platform](constraints/CON-cross-platform.md) | Technical | Active | Must run on Linux and Windows; macOS out of scope |
+| [CON-single-user](constraints/CON-single-user.md) | Operational | Active | Single-user deployment only |
+| [CON-solo-developer](constraints/CON-solo-developer.md) | Business | Active | Solo developer; favor simplicity and low maintenance |
+| [CON-zero-budget](constraints/CON-zero-budget.md) | Business | Active | No paid services, APIs, or libraries; all components free and open-source |
