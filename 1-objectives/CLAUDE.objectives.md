@@ -156,10 +156,10 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 | File | Category | Status | Risk | Summary |
 |------|----------|--------|------|---------|
 | [ASM-user-has-nvidia-gpu](assumptions/ASM-user-has-nvidia-gpu.md) | Environment | Verified | High | Users have an NVIDIA GPU with at least 4 GB VRAM |
-| [ASM-huggingface-models-available](assumptions/ASM-huggingface-models-available.md) | Technology | Unverified | High | Suitable open-weight TTS models exist on HuggingFace |
+| [ASM-huggingface-models-available](assumptions/ASM-huggingface-models-available.md) | Technology | Verified | High | Suitable open-weight TTS models exist on HuggingFace |
 | [ASM-internet-for-model-download](assumptions/ASM-internet-for-model-download.md) | Environment | Verified | Low | Internet available for initial model download; synthesis is offline |
 | [ASM-text-file-format](assumptions/ASM-text-file-format.md) | User | Verified | Medium | Users upload UTF-8 .txt files up to ~2 MB |
-| [ASM-browser-mp3-playback](assumptions/ASM-browser-mp3-playback.md) | Technology | Unverified | Low | Target browsers can natively play MP3 audio |
+| [ASM-browser-mp3-playback](assumptions/ASM-browser-mp3-playback.md) | Technology | Verified | Low | Target browsers can natively play MP3 audio |
 
 ---
 

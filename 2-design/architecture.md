@@ -137,7 +137,7 @@ graph TB
 - Performs disk space preflight check before starting (`REQ-F-disk-space-preflight`)
 - Records performance metrics per run (`REQ-F-performance-logging`)
 - On completion, stores the audiobook in the library automatically (`REQ-F-synthesize-audiobook`)
-- Handles ephemeral text preview synthesis (`REQ-F-text-preview`)
+- Handles ephemeral text preview synthesis (`REQ-F-text-preview`). Preview audio is stored as a single file at `data/temp/preview.mp3`, overwritten by each new preview job. Deleted when fetched via the API and purged on server startup (`CON-single-user`)
 
 #### Model Service
 
@@ -263,7 +263,4 @@ All dependencies are free and open-source (`REQ-COMP-foss-only`, `CON-zero-budge
 
 ## Design Risks
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| `ASM-huggingface-models-available` is unverified (High) | High | Model Service and TTS Engine depend on suitable models existing on HuggingFace. If invalidated, model listing and download components would need significant rework. Verify early in the Code phase. |
-| `ASM-browser-mp3-playback` is unverified (Low) | Low | All modern desktop browsers support MP3 natively. Minimal risk. |
+No unverified high-risk assumptions remain. The `GET /models/{id}/voices` endpoint will likely need model-specific adapters due to varying voice/language metadata formats across HuggingFace TTS models (see `ASM-huggingface-models-available` verification notes).

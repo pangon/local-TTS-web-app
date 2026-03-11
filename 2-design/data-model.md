@@ -183,12 +183,14 @@ data/
       chapter-01.mp3
       chapter-02.mp3
       ...
+  temp/
+    preview.mp3
 ```
 
 - Each audiobook gets a directory named by its UUID.
 - Chapter files are named sequentially: `chapter-01.mp3`, `chapter-02.mp3`, etc.
 - When an audiobook is deleted (`REQ-F-delete-audiobook`), its entire directory is removed.
-- Preview audio (`REQ-F-text-preview`) is temporary and not stored in this structure.
+- Preview audio (`REQ-F-text-preview`) is stored as a single file at `data/temp/preview.mp3`. Overwritten by each new preview job; deleted when fetched via `GET /jobs/{id}/audio` and purged on server startup.
 
 Model files are managed by the `huggingface_hub` library in its default cache directory and are not part of this data model.
 
