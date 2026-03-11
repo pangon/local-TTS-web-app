@@ -12,7 +12,7 @@ This repository uses a structured, AI-first development lifecycle. All project k
 
 ### Current State
 
-The project is in the Design phase. Architecture drafted; data model drafted; API design pending. 5 decisions recorded (DEC-fastapi-backend, DEC-vue3-frontend, DEC-sqlite-metadata, DEC-single-process, DEC-sse-progress). Objectives: 10 Goals, 12 User Stories, 28 Requirements (all approved); 6 Constraints (all active); 5 Assumptions (2 unverified).
+The project is in the Design phase. Architecture drafted; data model drafted (updated 2026-03-11: two-level playback bookmarks); API design pending. 5 decisions recorded (DEC-fastapi-backend, DEC-vue3-frontend, DEC-sqlite-metadata, DEC-single-process, DEC-sse-progress). Objectives: 10 Goals, 12 User Stories, 28 Requirements (all approved); 6 Constraints (all active); 5 Assumptions (2 unverified).
 
 ---
 

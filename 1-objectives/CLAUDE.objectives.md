@@ -127,7 +127,7 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 | [REQ-F-disk-space-preflight](requirements/REQ-F-disk-space-preflight.md) | Functional | Must-have | Approved | Check disk space before synthesis; block with error if insufficient |
 | [REQ-F-library-listing](requirements/REQ-F-library-listing.md) | Functional | Must-have | Approved | Display list of audiobooks with title, creation date, chapter count |
 | [REQ-F-audiobook-playback](requirements/REQ-F-audiobook-playback.md) | Functional | Must-have | Approved | Play audiobook in browser with chapter navigation |
-| [REQ-F-playback-resume](requirements/REQ-F-playback-resume.md) | Functional | Must-have | Approved | Persist and resume playback position across sessions |
+| [REQ-F-playback-resume](requirements/REQ-F-playback-resume.md) | Functional | Must-have | Approved | Two-level playback bookmarks: audiobook-level (last chapter) and per-chapter (timestamp) |
 | [REQ-F-delete-audiobook](requirements/REQ-F-delete-audiobook.md) | Functional | Must-have | Approved | Delete audiobook and audio files after user confirmation |
 | [REQ-F-model-listing](requirements/REQ-F-model-listing.md) | Functional | Must-have | Approved | List compatible HuggingFace TTS models with cache status |
 | [REQ-F-model-download](requirements/REQ-F-model-download.md) | Functional | Must-have | Approved | Download, cache, and load models with progress and disk check |

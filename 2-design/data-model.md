@@ -10,6 +10,7 @@ The data model uses SQLite for structured metadata and the file system for audio
 erDiagram
     Audiobook ||--o{ Chapter : contains
     Audiobook ||--o| PlaybackPosition : has
+    Audiobook ||--o{ ChapterPlaybackPosition : has
     Audiobook |o--o| Job : "created by"
     Job ||--o| PerformanceMetric : records
 
@@ -34,7 +35,13 @@ erDiagram
 
     PlaybackPosition {
         text audiobook_id PK "→ Audiobook (unique)"
-        integer chapter_number "Current chapter"
+        integer last_chapter_number "Last active chapter"
+        datetime updated_at
+    }
+
+    ChapterPlaybackPosition {
+        text audiobook_id PK "→ Audiobook (part of composite PK)"
+        integer chapter_number PK "Chapter number (part of composite PK)"
         real position_seconds "Timestamp within chapter"
         datetime updated_at
     }
@@ -96,16 +103,28 @@ One record per audio file within an audiobook (`REQ-F-chapter-split-output`). If
 
 ### PlaybackPosition
 
-Persists the user's last playback position for an audiobook (`REQ-F-playback-resume`). One record per audiobook, since the application is single-user (`CON-single-user`).
+Audiobook-level bookmark: records which chapter the user was last listening to (`REQ-F-playback-resume`). One record per audiobook, since the application is single-user (`CON-single-user`).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `audiobook_id` | TEXT | PK, FK → Audiobook | One position per audiobook |
-| `chapter_number` | INTEGER | NOT NULL | Chapter the user was on |
+| `audiobook_id` | TEXT | PK, FK → Audiobook | One row per audiobook |
+| `last_chapter_number` | INTEGER | NOT NULL | Chapter the user was last listening to |
+| `updated_at` | DATETIME | NOT NULL | Last update time |
+
+**Lifecycle**: Created on first playback pause/stop → updated whenever the active chapter changes → deleted when parent audiobook is deleted.
+
+### ChapterPlaybackPosition
+
+Per-chapter bookmark: records the playback timestamp within each individual chapter (`REQ-F-playback-resume`). One record per chapter that has been listened to. Analogous to Netflix remembering the position of each episode in a series.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `audiobook_id` | TEXT | PK part 1, FK → Audiobook | Parent audiobook |
+| `chapter_number` | INTEGER | PK part 2 | Chapter number |
 | `position_seconds` | REAL | NOT NULL | Timestamp within the chapter |
 | `updated_at` | DATETIME | NOT NULL | Last update time |
 
-**Lifecycle**: Created on first playback pause/stop → updated on each subsequent pause/stop → deleted when parent audiobook is deleted.
+**Lifecycle**: Created on first pause/stop of a chapter → updated on each subsequent pause/stop of that chapter → deleted when parent audiobook is deleted.
 
 ### Job
 
@@ -197,10 +216,17 @@ CREATE TABLE chapter (
 );
 
 CREATE TABLE playback_position (
-    audiobook_id    TEXT PRIMARY KEY REFERENCES audiobook(id) ON DELETE CASCADE,
+    audiobook_id        TEXT PRIMARY KEY REFERENCES audiobook(id) ON DELETE CASCADE,
+    last_chapter_number INTEGER NOT NULL,
+    updated_at          DATETIME NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE chapter_playback_position (
+    audiobook_id    TEXT NOT NULL REFERENCES audiobook(id) ON DELETE CASCADE,
     chapter_number  INTEGER NOT NULL,
     position_seconds REAL NOT NULL,
-    updated_at      DATETIME NOT NULL DEFAULT (datetime('now'))
+    updated_at      DATETIME NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (audiobook_id, chapter_number)
 );
 
 CREATE TABLE job (
@@ -234,7 +260,7 @@ CREATE TABLE performance_metric (
 | `REQ-F-chapter-split-output` | Chapter |
 | `REQ-F-library-listing` | Audiobook, Chapter |
 | `REQ-F-audiobook-playback` | Audiobook, Chapter |
-| `REQ-F-playback-resume` | PlaybackPosition |
+| `REQ-F-playback-resume` | PlaybackPosition, ChapterPlaybackPosition |
 | `REQ-F-delete-audiobook` | Audiobook (cascade to Chapter, PlaybackPosition, files) |
 | `REQ-F-download-audiobook` | Chapter (audio_filename) |
 | `REQ-F-voice-language-selection` | Audiobook (voice, language) |

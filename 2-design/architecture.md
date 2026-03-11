@@ -184,7 +184,8 @@ class TTSEngine:
 **SQLite Database** — stores metadata only:
 
 - Audiobook records (title, source filename, creation date, chapter list)
-- Playback positions (audiobook ID, chapter index, timestamp)
+- Audiobook-level bookmarks (last active chapter per audiobook)
+- Per-chapter bookmarks (playback timestamp within each listened chapter)
 - Job history (status, timestamps, error details)
 - Performance metrics (latency, resource usage per run)
 
