@@ -10,7 +10,11 @@ This phase contains the **implementation**. Focus on clean, tested, maintainable
 
 | File | Title | Trigger |
 |------|-------|---------|
-<!-- Add rows as decisions are recorded. File column: [DEC-kebab-name](../2-design/decisions/DEC-kebab-name.md) -->
+| [DEC-fastapi-backend](../2-design/decisions/DEC-fastapi-backend.md) | Python + FastAPI Backend | When implementing any backend functionality |
+| [DEC-vue3-frontend](../2-design/decisions/DEC-vue3-frontend.md) | Vue 3 + Vite Frontend | When implementing any frontend functionality |
+| [DEC-sqlite-metadata](../2-design/decisions/DEC-sqlite-metadata.md) | SQLite for Metadata Storage | When implementing any data persistence |
+| [DEC-single-process](../2-design/decisions/DEC-single-process.md) | Monolithic Single-Process Architecture | When implementing background processing or adding new services |
+| [DEC-sse-progress](../2-design/decisions/DEC-sse-progress.md) | Server-Sent Events for Real-Time Updates | When implementing progress reporting or live status updates |
 
 ---
 

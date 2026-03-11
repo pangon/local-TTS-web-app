@@ -19,7 +19,11 @@ This phase defines **how** we're building the system. Focus on architecture, dat
 
 | File | Title | Trigger |
 |------|-------|---------|
-<!-- Add rows as decisions are recorded. File column: [DEC-kebab-name](decisions/DEC-kebab-name.md) -->
+| [DEC-fastapi-backend](decisions/DEC-fastapi-backend.md) | Python + FastAPI Backend | When defining API endpoints, backend components, or startup commands |
+| [DEC-vue3-frontend](decisions/DEC-vue3-frontend.md) | Vue 3 + Vite Frontend | When defining UI views, component structure, or frontend build |
+| [DEC-sqlite-metadata](decisions/DEC-sqlite-metadata.md) | SQLite for Metadata Storage | When defining data models or storage patterns |
+| [DEC-single-process](decisions/DEC-single-process.md) | Monolithic Single-Process Architecture | When defining component boundaries, background processing, or deployment |
+| [DEC-sse-progress](decisions/DEC-sse-progress.md) | Server-Sent Events for Real-Time Updates | When implementing progress reporting or live status updates |
 
 ---
 

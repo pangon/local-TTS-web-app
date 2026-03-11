@@ -12,7 +12,7 @@ This repository uses a structured, AI-first development lifecycle. All project k
 
 ### Current State
 
-The project is in the Objectives phase. Stakeholders defined; 10 Goals approved (5 Must-have, 5 Should-have); 12 User Stories approved (5 Must-have, 7 Should-have); 28 Requirements approved (15 Must-have, 13 Should-have); 6 Constraints created (CON-gpu-inference, CON-nvidia-gpu, CON-cross-platform, CON-single-user, CON-solo-developer, CON-zero-budget); 5 Assumptions (3 Verified: ASM-user-has-nvidia-gpu, ASM-internet-for-model-download, ASM-text-file-format; 2 Unverified: ASM-huggingface-models-available, ASM-browser-mp3-playback). Gap analysis (2026-03-09): 0 Critical, 1 Important, 2 Minor.
+The project is in the Design phase. Architecture drafted; data model drafted; API design pending. 5 decisions recorded (DEC-fastapi-backend, DEC-vue3-frontend, DEC-sqlite-metadata, DEC-single-process, DEC-sse-progress). Objectives: 10 Goals, 12 User Stories, 28 Requirements (all approved); 6 Constraints (all active); 5 Assumptions (2 unverified).
 
 ---
 

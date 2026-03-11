@@ -8,10 +8,11 @@ This phase handles **deployment and operations**. Focus on reliability, repeatab
 
 ## Decisions Relevant to This Phase
 
-<!-- Add rows as decisions are recorded. File column: [DEC-kebab-name](../2-design/decisions/DEC-kebab-name.md) -->
-
 | File | Title | Trigger |
 |------|-------|---------|
+| [DEC-fastapi-backend](../2-design/decisions/DEC-fastapi-backend.md) | Python + FastAPI Backend | When configuring the server or defining startup commands |
+| [DEC-vue3-frontend](../2-design/decisions/DEC-vue3-frontend.md) | Vue 3 + Vite Frontend | When building the frontend for production |
+| [DEC-single-process](../2-design/decisions/DEC-single-process.md) | Monolithic Single-Process Architecture | When defining startup commands or infrastructure |
 
 ---
 
