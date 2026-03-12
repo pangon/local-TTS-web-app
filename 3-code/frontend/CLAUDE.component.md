@@ -1,0 +1,35 @@
+# Frontend
+
+**Responsibility**: User interface, client-side routing, audio playback, and SSE event consumption.
+
+**Technology**: Vue 3 (Composition API), Vite, Vue Router
+
+## Interfaces
+
+- HTTP REST with backend: sends API requests for all user actions (CRUD, job creation, model management)
+- SSE with backend: receives real-time progress and status events via `EventSource` API
+
+## Requirements Addressed
+
+| File | Type | Priority | Summary |
+|------|------|----------|---------|
+| [REQ-F-upload-text-file](../../1-objectives/requirements/REQ-F-upload-text-file.md) | Functional | Must-have | Upload text file for synthesis |
+| [REQ-F-synthesis-progress](../../1-objectives/requirements/REQ-F-synthesis-progress.md) | Functional | Must-have | Display synthesis progress in real time |
+| [REQ-F-library-listing](../../1-objectives/requirements/REQ-F-library-listing.md) | Functional | Must-have | List audiobooks in library |
+| [REQ-F-audiobook-playback](../../1-objectives/requirements/REQ-F-audiobook-playback.md) | Functional | Must-have | Play audiobook audio in browser |
+| [REQ-F-playback-resume](../../1-objectives/requirements/REQ-F-playback-resume.md) | Functional | Must-have | Resume playback from saved position |
+| [REQ-PORT-linux-windows](../../1-objectives/requirements/REQ-PORT-linux-windows.md) | Portability | Must-have | Run on Linux and Windows |
+| [REQ-COMP-foss-only](../../1-objectives/requirements/REQ-COMP-foss-only.md) | Compliance | Must-have | Use only FOSS dependencies |
+| [REQ-F-download-audiobook](../../1-objectives/requirements/REQ-F-download-audiobook.md) | Functional | Should-have | Download audiobook as ZIP |
+| [REQ-F-voice-language-selection](../../1-objectives/requirements/REQ-F-voice-language-selection.md) | Functional | Should-have | Select voice and language |
+| [REQ-F-job-monitoring](../../1-objectives/requirements/REQ-F-job-monitoring.md) | Functional | Should-have | Monitor job status and history |
+| [REQ-F-resource-monitoring](../../1-objectives/requirements/REQ-F-resource-monitoring.md) | Functional | Should-have | View system resource usage |
+| [REQ-F-text-preview](../../1-objectives/requirements/REQ-F-text-preview.md) | Functional | Should-have | Preview TTS with sample text |
+| [REQ-PORT-browser-compat](../../1-objectives/requirements/REQ-PORT-browser-compat.md) | Portability | Should-have | Support major browsers |
+
+## Relevant Decisions
+
+| File | Title | Trigger |
+|------|-------|---------|
+| [DEC-vue3-frontend](../../2-design/decisions/DEC-vue3-frontend.md) | Vue 3 + Vite Frontend | When implementing any frontend functionality |
+| [DEC-sse-progress](../../2-design/decisions/DEC-sse-progress.md) | Server-Sent Events for Real-Time Updates | When implementing progress reporting or live status updates |

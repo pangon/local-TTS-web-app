@@ -12,7 +12,7 @@ This repository uses a structured, AI-first development lifecycle. All project k
 
 ### Current State
 
-The project is in the Design phase. Architecture drafted (updated 2026-03-11: preview audio storage); data model drafted (updated 2026-03-11: two-level playback bookmarks, preview temp file); API design drafted (updated 2026-03-11: model delete 409 message, preview fetch-and-delete). 5 decisions recorded (DEC-fastapi-backend, DEC-vue3-frontend, DEC-sqlite-metadata, DEC-single-process, DEC-sse-progress). Objectives: 10 Goals, 12 User Stories, 28 Requirements (all approved); 6 Constraints (all active); 5 Assumptions (all verified). Completeness assessment (2026-03-11): 0 Critical, 1 Important (ASM-huggingface-models-available unverified), 3 Minor (stale — design changed since).
+The project is transitioning from Design to Code phase. Architecture drafted (updated 2026-03-11); data model drafted (updated 2026-03-11); API design drafted (updated 2026-03-11). 5 decisions recorded (DEC-fastapi-backend, DEC-vue3-frontend, DEC-sqlite-metadata, DEC-single-process, DEC-sse-progress). Objectives: 10 Goals, 12 User Stories, 28 Requirements (all approved); 6 Constraints (all active); 5 Assumptions (all verified). Completeness assessment (2026-03-11): 0 Critical, 1 Important (ASM-huggingface-models-available unverified), 3 Minor (stale — design changed since). 3 components identified (2026-03-12): frontend, backend, tts-engine; per-component directories created in `3-code/`.
 
 ---
 
@@ -44,8 +44,8 @@ Before creating artifacts in the next phase, check these minimum preconditions. 
 
 | Transition | Preconditions |
 |------------|---------------|
-| Objectives → Design | At least one goal Approved; at least one requirement Approved; stakeholders defined |
-| Design → Code | `architecture.md` has content; at least one requirement has a corresponding task in `tasks.md` |
+| Objectives → Design | Stakeholders defined; at least one goal Approved; at least one requirement Approved; gap analysis recorded in Current State and fresh (not stale, no Critical gaps) |
+| Design → Code | All design documents drafted (`architecture.md`, `data-model.md`, `api-design.md`); completeness assessment recorded in Current State and fresh (not stale, no Critical findings); components identified (per-component directories in `3-code/`) |
 | Code → Deploy | At least one task Done |
 
 ---
