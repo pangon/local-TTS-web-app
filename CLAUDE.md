@@ -12,7 +12,7 @@ This repository uses a structured, AI-first development lifecycle. All project k
 
 ### Current State
 
-The project is transitioning from Design to Code phase. Architecture drafted (updated 2026-03-11); data model drafted (updated 2026-03-11); API design drafted (updated 2026-03-11). 5 decisions recorded (DEC-fastapi-backend, DEC-vue3-frontend, DEC-sqlite-metadata, DEC-single-process, DEC-sse-progress). Objectives: 10 Goals, 12 User Stories, 28 Requirements (all approved); 6 Constraints (all active); 5 Assumptions (all verified). Completeness assessment (2026-03-11): 0 Critical, 1 Important (ASM-huggingface-models-available unverified), 3 Minor (stale — design changed since). 3 components identified (2026-03-12): frontend, backend, tts-engine; per-component directories created in `3-code/`.
+The project is in the Code phase. Architecture drafted (updated 2026-03-11); data model drafted (updated 2026-03-11); API design drafted (updated 2026-03-11). 5 decisions recorded (DEC-fastapi-backend, DEC-vue3-frontend, DEC-sqlite-metadata, DEC-single-process, DEC-sse-progress). Objectives: 10 Goals, 12 User Stories, 28 Requirements (all approved); 6 Constraints (all active); 5 Assumptions (all verified). Completeness assessment (2026-03-11): 0 Critical, 1 Important (ASM-huggingface-models-available unverified), 3 Minor (stale — design changed since). 3 components identified (2026-03-12): frontend, backend, tts-engine; per-component directories created in `3-code/`. Implementation plan created (2026-03-12): 8 phases, 42 tasks covering all 10 approved goals.
 
 ---
 
