@@ -39,7 +39,7 @@ class TestValidateGpu:
             mock_torch.cuda.is_available.return_value = True
             mock_torch.cuda.get_device_name.return_value = "NVIDIA RTX 3080"
             props = MagicMock()
-            props.total_mem = 10 * 1024 * 1024 * 1024  # 10 GB
+            props.total_memory = 10 * 1024 * 1024 * 1024  # 10 GB
             mock_torch.cuda.get_device_properties.return_value = props
             mock_torch.cuda.memory_reserved.return_value = 2 * 1024 * 1024 * 1024  # 2 GB reserved
             mock_torch.version.cuda = "12.1"
@@ -58,7 +58,7 @@ class TestValidateGpu:
             mock_torch.cuda.is_available.return_value = True
             mock_torch.cuda.get_device_name.return_value = "NVIDIA RTX 4090"
             props = MagicMock()
-            props.total_mem = 24 * 1024 * 1024 * 1024  # 24 GB
+            props.total_memory = 24 * 1024 * 1024 * 1024  # 24 GB
             mock_torch.cuda.get_device_properties.return_value = props
             mock_torch.cuda.memory_reserved.return_value = 0
             mock_torch.version.cuda = "12.4"
@@ -74,7 +74,7 @@ class TestValidateGpu:
             mock_torch.cuda.is_available.return_value = True
             mock_torch.cuda.get_device_name.return_value = "GPU"
             props = MagicMock()
-            props.total_mem = 4 * 1024 * 1024 * 1024
+            props.total_memory = 4 * 1024 * 1024 * 1024
             mock_torch.cuda.get_device_properties.return_value = props
             mock_torch.cuda.memory_reserved.return_value = 0
             mock_torch.version.cuda = None

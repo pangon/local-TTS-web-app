@@ -55,7 +55,7 @@ def validate_gpu() -> GPUInfo:
 
     device_index = 0
     name = torch.cuda.get_device_name(device_index)
-    vram_total = torch.cuda.get_device_properties(device_index).total_mem
+    vram_total = torch.cuda.get_device_properties(device_index).total_memory
     vram_free = vram_total - torch.cuda.memory_reserved(device_index)
     cuda_version = torch.version.cuda or "unknown"
 

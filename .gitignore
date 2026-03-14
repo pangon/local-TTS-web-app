@@ -24,6 +24,9 @@ __pycache__/
 # Test
 .pytest_cache/
 
+# Runtime data (SQLite DB, audio files, model cache)
+3-code/backend/data/
+
 # Build outputs (uncomment what applies to your stack)
 # node_modules/
 # dist/
