@@ -87,6 +87,12 @@
 |----|------|----------|--------|-----|--------------|---------|-------|
 | TASK-startup-script | Create cross-platform startup script for Linux and Windows | P2 | Todo | [REQ-USA-simple-setup](../1-objectives/requirements/REQ-USA-simple-setup.md), [REQ-PORT-linux-windows](../1-objectives/requirements/REQ-PORT-linux-windows.md) | TASK-fastapi-app-skeleton, TASK-static-file-serving | 2026-03-12 | |
 | TASK-setup-documentation | Write setup instructions with dependencies, system requirements, and quickstart | P2 | Todo | [REQ-USA-simple-setup](../1-objectives/requirements/REQ-USA-simple-setup.md) | TASK-startup-script | 2026-03-12 | |
+| TASK-phase-3-manual-testing | Create runbook and document build/run/test commands for model management capabilities | P1 | Todo | - | TASK-model-management-view | 2026-03-15 | Covers phases 1-3 |
+| TASK-phase-4-manual-testing | Update runbook and component docs for audiobook synthesis capabilities | P1 | Todo | - | TASK-audiobook-creation-view | 2026-03-15 | |
+| TASK-phase-5-manual-testing | Update runbook and component docs for library and playback capabilities | P1 | Todo | - | TASK-playback-view | 2026-03-15 | |
+| TASK-phase-6-manual-testing | Update runbook and component docs for voice selection and text preview capabilities | P2 | Todo | - | TASK-text-preview-view | 2026-03-15 | |
+| TASK-phase-7-manual-testing | Update runbook and component docs for monitoring, downloads, and cache management | P2 | Todo | - | TASK-model-cache-ui | 2026-03-15 | |
+| TASK-phase-8-manual-testing | Update runbook and component docs for deployment and setup documentation | P2 | Todo | - | TASK-setup-documentation | 2026-03-15 | |
 
 ---
 
@@ -143,6 +149,7 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 3. TASK-model-download-sse
 4. TASK-frontend-sse-client
 5. TASK-model-management-view
+6. TASK-phase-3-manual-testing
 
 ### Phase 4: Audiobook Synthesis End-to-End
 
@@ -158,6 +165,7 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 3. TASK-job-progress-sse
 4. TASK-library-service-create
 5. TASK-audiobook-creation-view
+6. TASK-phase-4-manual-testing
 
 ### Phase 5: Library & Playback
 
@@ -173,6 +181,7 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 3. TASK-playback-position-api
 4. TASK-library-view
 5. TASK-playback-view
+6. TASK-phase-5-manual-testing
 
 ### Phase 6: Voice Selection & Text Preview
 
@@ -188,6 +197,7 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 3. TASK-default-voice-config
 4. TASK-preview-job-service
 5. TASK-text-preview-view
+6. TASK-phase-6-manual-testing
 
 ### Phase 7: Monitoring, Downloads & Cache Management
 
@@ -207,6 +217,7 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 6. TASK-audiobook-download-ui
 7. TASK-model-cache-api
 8. TASK-model-cache-ui
+9. TASK-phase-7-manual-testing
 
 ### Phase 8: Deployment & Documentation
 
@@ -218,3 +229,4 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 **Tasks:**
 1. TASK-startup-script
 2. TASK-setup-documentation
+3. TASK-phase-8-manual-testing
