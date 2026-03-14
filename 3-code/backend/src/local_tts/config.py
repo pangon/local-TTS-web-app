@@ -10,3 +10,10 @@ PORT: int = int(os.environ.get("LOCAL_TTS_PORT", "8000"))
 DATA_DIR: Path = Path(
     os.environ.get("LOCAL_TTS_DATA_DIR", str(Path(__file__).resolve().parents[2] / "data"))
 )
+
+STATIC_DIR: Path = Path(
+    os.environ.get(
+        "LOCAL_TTS_STATIC_DIR",
+        str(Path(__file__).resolve().parents[3] / "frontend" / "dist"),
+    )
+)

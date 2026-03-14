@@ -38,7 +38,7 @@
 |----|------|----------|--------|-----|--------------|---------|-------|
 | TASK-fastapi-app-skeleton | Create FastAPI app with Uvicorn, localhost binding, and startup URL display | P0 | Done | [REQ-SEC-localhost-binding](../1-objectives/requirements/REQ-SEC-localhost-binding.md) | TASK-python-project-scaffold | 2026-03-14 | |
 | TASK-sqlite-schema-init | Implement SQLite database initialization with full schema on startup | P0 | Done | - | TASK-fastapi-app-skeleton | 2026-03-14 | |
-| TASK-static-file-serving | Configure FastAPI to serve Vue production build as static files | P0 | Todo | - | TASK-fastapi-app-skeleton, TASK-vue-project-scaffold | 2026-03-12 | |
+| TASK-static-file-serving | Configure FastAPI to serve Vue production build as static files | P0 | Done | - | TASK-fastapi-app-skeleton, TASK-vue-project-scaffold | 2026-03-14 | |
 | TASK-startup-gpu-check | Integrate GPU validation into FastAPI startup sequence | P1 | Todo | [REQ-F-gpu-validation](../1-objectives/requirements/REQ-F-gpu-validation.md) | TASK-fastapi-app-skeleton, TASK-tts-engine-interface | 2026-03-12 | |
 | TASK-sse-endpoint | Implement SSE endpoint with keepalive and event broadcasting | P0 | Todo | - | TASK-fastapi-app-skeleton | 2026-03-12 | |
 | TASK-model-service | Implement Model Service and API: list, download, load with VRAM check | P1 | Todo | [REQ-F-model-listing](../1-objectives/requirements/REQ-F-model-listing.md), [REQ-F-model-download](../1-objectives/requirements/REQ-F-model-download.md), [REQ-F-gpu-validation](../1-objectives/requirements/REQ-F-gpu-validation.md) | TASK-tts-engine-interface | 2026-03-12 | |

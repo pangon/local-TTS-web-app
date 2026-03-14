@@ -37,9 +37,15 @@ class TestHealthEndpoint:
 
     @pytest.mark.anyio
     async def test_api_v1_prefix(self, client):
-        """Health endpoint is only available under /api/v1/."""
+        """Health endpoint is only available under /api/v1/, not at root."""
         response = await client.get("/health")
-        assert response.status_code == 404
+        # /health is not an API route. If static files are mounted it returns
+        # the SPA page (200 html); otherwise 404. Either way it must not
+        # return the JSON health payload.
+        if response.status_code == 200:
+            assert "text/html" in response.headers.get("content-type", "")
+        else:
+            assert response.status_code == 404
 
 
 class TestLocalhostBinding:
