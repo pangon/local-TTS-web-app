@@ -2,7 +2,10 @@
 
 from fastapi import APIRouter
 
+from local_tts.api.sse import router as sse_router
+
 api_router = APIRouter()
+api_router.include_router(sse_router)
 
 
 @api_router.get("/health")
