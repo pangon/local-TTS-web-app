@@ -33,3 +33,4 @@
 |------|-------|---------|
 | [DEC-vue3-frontend](../../2-design/decisions/DEC-vue3-frontend.md) | Vue 3 + Vite Frontend | When implementing any frontend functionality |
 | [DEC-sse-progress](../../2-design/decisions/DEC-sse-progress.md) | Server-Sent Events for Real-Time Updates | When implementing progress reporting or live status updates |
+| [DEC-frontend-dev-env](../../2-design/decisions/DEC-frontend-dev-env.md) | Frontend Development Environment Conventions | When installing dependencies, running tests, building, or adding new frontend modules |
