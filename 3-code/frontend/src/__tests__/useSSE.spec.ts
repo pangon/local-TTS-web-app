@@ -108,7 +108,7 @@ describe('useSSE', () => {
     mount(Component)
 
     expect(MockEventSource.instances).toHaveLength(1)
-    expect(MockEventSource.instances[0].url).toBe('/api/v1/events')
+    expect(MockEventSource.instances[0]!.url).toBe('/api/v1/events')
   })
 
   it('sets isConnected to true when EventSource opens', async () => {
@@ -145,7 +145,7 @@ describe('useSSE', () => {
     await flushPromises()
     expect(sseReturn!.isConnected.value).toBe(true)
 
-    MockEventSource.instances[0].simulateError()
+    MockEventSource.instances[0]!.simulateError()
     expect(sseReturn!.isConnected.value).toBe(false)
   })
 
@@ -169,7 +169,7 @@ describe('useSSE', () => {
       model_id: 'facebook/mms-tts-eng',
       progress: 42,
     }
-    MockEventSource.instances[0].simulateEvent('download-progress', payload)
+    MockEventSource.instances[0]!.simulateEvent('download-progress', payload)
 
     expect(handler).toHaveBeenCalledOnce()
     expect(handler).toHaveBeenCalledWith(payload)
@@ -192,7 +192,7 @@ describe('useSSE', () => {
     mount(Component)
     await flushPromises()
 
-    MockEventSource.instances[0].simulateEvent('download-progress', {
+    MockEventSource.instances[0]!.simulateEvent('download-progress', {
       model_id: 'test',
       progress: 50,
     })
@@ -216,7 +216,7 @@ describe('useSSE', () => {
     mount(Component)
     await flushPromises()
 
-    MockEventSource.instances[0].simulateEvent('download-progress', {
+    MockEventSource.instances[0]!.simulateEvent('download-progress', {
       model_id: 'test',
       progress: 10,
     })
@@ -259,7 +259,7 @@ describe('useSSE', () => {
     wrapper.unmount()
 
     // The EventSource was closed (only consumer disconnected)
-    expect(MockEventSource.instances[0].closed).toBe(true)
+    expect(MockEventSource.instances[0]!.closed).toBe(true)
   })
 
   it('closes EventSource when last consumer unmounts', async () => {
@@ -286,11 +286,11 @@ describe('useSSE', () => {
 
     w1.unmount()
     // Still one consumer — connection stays open
-    expect(MockEventSource.instances[0].closed).toBe(false)
+    expect(MockEventSource.instances[0]!.closed).toBe(false)
 
     w2.unmount()
     // Last consumer gone — connection closed
-    expect(MockEventSource.instances[0].closed).toBe(true)
+    expect(MockEventSource.instances[0]!.closed).toBe(true)
   })
 
   it('ignores malformed JSON in event data', async () => {
@@ -310,7 +310,7 @@ describe('useSSE', () => {
     await flushPromises()
 
     // Simulate a raw event with invalid JSON
-    const es = MockEventSource.instances[0]
+    const es = MockEventSource.instances[0]!
     const listeners = (es as any)._listeners.get('download-progress') ?? []
     const badEvent = new MessageEvent('download-progress', { data: 'not-json' })
     for (const l of listeners) l(badEvent)
@@ -341,7 +341,7 @@ describe('useSSE', () => {
       type: 'synthesis',
       error_message: 'Out of VRAM',
     }
-    MockEventSource.instances[0].simulateEvent('job-failed', payload)
+    MockEventSource.instances[0]!.simulateEvent('job-failed', payload)
 
     expect(handler1).toHaveBeenCalledWith(payload)
     expect(handler2).toHaveBeenCalledWith(payload)

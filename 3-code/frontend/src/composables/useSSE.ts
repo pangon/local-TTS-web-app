@@ -161,14 +161,16 @@ export function useSSE(): {
   function off<T extends SSEEventType>(eventType: T, callback: SSECallback<T>): void {
     // Remove from global listeners
     for (let i = listeners.length - 1; i >= 0; i--) {
-      if (listeners[i].eventType === eventType && listeners[i].callback === callback) {
+      const entry = listeners[i]!
+      if (entry.eventType === eventType && entry.callback === callback) {
         listeners.splice(i, 1)
         break
       }
     }
     // Remove from local tracking
     for (let i = localListeners.length - 1; i >= 0; i--) {
-      if (localListeners[i].eventType === eventType && localListeners[i].callback === callback) {
+      const entry = localListeners[i]!
+      if (entry.eventType === eventType && entry.callback === callback) {
         localListeners.splice(i, 1)
         break
       }
