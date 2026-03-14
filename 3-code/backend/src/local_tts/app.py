@@ -13,6 +13,7 @@ from local_tts.api.router import api_router
 from local_tts.db import init_db
 from local_tts.spa import SPAStaticFiles
 from local_tts.tts.engine import TTSEngine
+from local_tts.tts.ffmpeg_validator import FFmpegNotFoundError
 from local_tts.tts.gpu_validator import GPUValidationError
 
 logger = logging.getLogger(__name__)
@@ -37,9 +38,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         gpu_info.vram_free_mb,
         gpu_info.cuda_version,
     )
+
+    # Step 2: Validate ffmpeg (REQ-F-synthesize-audiobook — required for MP3 encoding)
+    try:
+        ffmpeg_path = tts_engine.validate_ffmpeg()
+    except FFmpegNotFoundError as exc:
+        logger.error("ffmpeg validation failed: %s", exc)
+        print(f"\nERROR: {exc}\n", file=sys.stderr)
+        sys.exit(1)
+
+    logger.info("ffmpeg found: %s", ffmpeg_path)
     app.state.tts_engine = tts_engine
 
-    # Step 2: Initialize database
+    # Step 3: Initialize database
     conn = init_db(config.DATA_DIR)
     app.state.db_conn = conn
     yield

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Callable
 
 from local_tts.tts.chapter_parser import Chapter, parse_chapters
+from local_tts.tts.ffmpeg_validator import FFmpegNotFoundError, validate_ffmpeg
 from local_tts.tts.gpu_validator import (
     GPUInfo,
     GPUValidationError,
@@ -71,6 +72,21 @@ class TTSEngine:
             GPUValidationError: If no GPU is available.
         """
         return check_vram(required_mb)
+
+    # ------------------------------------------------------------------
+    # ffmpeg validation
+    # ------------------------------------------------------------------
+
+    def validate_ffmpeg(self) -> str:
+        """Verify that ffmpeg is available on the system PATH.
+
+        Returns:
+            The absolute path to the ffmpeg executable.
+
+        Raises:
+            FFmpegNotFoundError: If ffmpeg is not found.
+        """
+        return validate_ffmpeg()
 
     # ------------------------------------------------------------------
     # Model management
