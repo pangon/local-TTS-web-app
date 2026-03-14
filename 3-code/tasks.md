@@ -70,7 +70,7 @@
 | ID | Task | Priority | Status | Req | Dependencies | Updated | Notes |
 |----|------|----------|--------|-----|--------------|---------|-------|
 | TASK-vite-dev-proxy | Configure Vite dev server to proxy /api requests to FastAPI | P0 | Done | - | TASK-vue-project-scaffold, TASK-fastapi-app-skeleton | 2026-03-14 | |
-| TASK-frontend-sse-client | Implement EventSource SSE client service in Vue | P0 | Todo | - | TASK-sse-endpoint, TASK-vue-project-scaffold | 2026-03-12 | |
+| TASK-frontend-sse-client | Implement EventSource SSE client service in Vue | P0 | Done | - | TASK-sse-endpoint, TASK-vue-project-scaffold | 2026-03-14 | |
 | TASK-model-management-view | Implement model management view: list, download with progress, load | P1 | Todo | [REQ-F-model-listing](../1-objectives/requirements/REQ-F-model-listing.md), [REQ-F-model-download](../1-objectives/requirements/REQ-F-model-download.md) | TASK-model-service, TASK-frontend-sse-client | 2026-03-12 | |
 | TASK-audiobook-creation-view | Implement audiobook creation view: file upload, trigger, progress display | P1 | Todo | [REQ-F-upload-text-file](../1-objectives/requirements/REQ-F-upload-text-file.md), [REQ-F-synthesis-progress](../1-objectives/requirements/REQ-F-synthesis-progress.md) | TASK-synthesis-job-api, TASK-frontend-sse-client | 2026-03-12 | |
 | TASK-library-view | Implement library view: browse audiobooks, delete with confirmation | P1 | Todo | [REQ-F-library-listing](../1-objectives/requirements/REQ-F-library-listing.md), [REQ-F-delete-audiobook](../1-objectives/requirements/REQ-F-delete-audiobook.md) | TASK-library-api | 2026-03-12 | |
