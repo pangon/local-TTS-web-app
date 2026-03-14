@@ -12,6 +12,7 @@ from local_tts import config
 from local_tts.api.router import api_router
 from local_tts.api.sse import EventBus
 from local_tts.db import init_db
+from local_tts.services.model_service import ModelService
 from local_tts.spa import SPAStaticFiles
 from local_tts.tts.engine import TTSEngine
 from local_tts.tts.ffmpeg_validator import FFmpegNotFoundError
@@ -51,6 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("ffmpeg found: %s", ffmpeg_path)
     app.state.tts_engine = tts_engine
     app.state.event_bus = EventBus()
+    app.state.model_service = ModelService(tts_engine, app.state.event_bus)
 
     # Step 3: Initialize database
     conn = init_db(config.DATA_DIR)
