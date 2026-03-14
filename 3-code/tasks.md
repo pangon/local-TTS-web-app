@@ -29,7 +29,7 @@
 
 | ID | Task | Priority | Status | Req | Dependencies | Updated | Notes |
 |----|------|----------|--------|-----|--------------|---------|-------|
-| TASK-python-project-scaffold | Initialize Python project with pyproject.toml, src layout, and dependencies | P0 | Todo | - | - | 2026-03-12 | |
+| TASK-python-project-scaffold | Initialize Python project with pyproject.toml, src layout, and dependencies | P0 | Done | - | - | 2026-03-14 | |
 | TASK-vue-project-scaffold | Initialize Vue 3 + Vite project with Vue Router | P0 | Todo | - | - | 2026-03-12 | |
 
 ### Backend

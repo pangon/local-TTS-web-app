@@ -50,3 +50,4 @@
 | [DEC-single-process](../../2-design/decisions/DEC-single-process.md) | Monolithic Single-Process Architecture | When implementing background processing or adding new services |
 | [DEC-sse-progress](../../2-design/decisions/DEC-sse-progress.md) | Server-Sent Events for Real-Time Updates | When implementing progress reporting or live status updates |
 | [DEC-tts-as-backend-module](../../2-design/decisions/DEC-tts-as-backend-module.md) | TTS Engine as Backend Submodule | When implementing TTS engine functionality or organizing backend package structure |
+| [DEC-python-backend-env](../../2-design/decisions/DEC-python-backend-env.md) | Python Backend Environment Conventions | When installing dependencies, running tests, or adding new Python modules |
