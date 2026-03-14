@@ -57,6 +57,12 @@
 | TASK-resource-monitoring-api | Implement GET /system/status with CPU, memory, GPU, and loaded model | P2 | Todo | [REQ-F-resource-monitoring](../1-objectives/requirements/REQ-F-resource-monitoring.md) | TASK-tts-engine-interface | 2026-03-12 | |
 | TASK-audiobook-download-api | Implement GET /audiobooks/{id}/download as ZIP archive | P2 | Todo | [REQ-F-download-audiobook](../1-objectives/requirements/REQ-F-download-audiobook.md) | TASK-library-api | 2026-03-12 | |
 | TASK-model-cache-api | Implement GET /models/cache and DELETE /models/{id}/cache endpoints | P2 | Todo | [REQ-F-model-cache-view](../1-objectives/requirements/REQ-F-model-cache-view.md), [REQ-F-model-delete](../1-objectives/requirements/REQ-F-model-delete.md) | TASK-model-service | 2026-03-12 | |
+| TASK-gpu-validator | Implement NVIDIA GPU/CUDA detection and VRAM availability checking | P1 | Todo | [REQ-F-gpu-validation](../1-objectives/requirements/REQ-F-gpu-validation.md) | TASK-python-project-scaffold | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
+| TASK-model-loader | Implement HuggingFace model download, caching, and GPU loading | P1 | Todo | [REQ-F-model-download](../1-objectives/requirements/REQ-F-model-download.md) | TASK-gpu-validator | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
+| TASK-chapter-parser | Implement chapter structure detection and text splitting | P1 | Todo | [REQ-F-chapter-split-output](../1-objectives/requirements/REQ-F-chapter-split-output.md) | TASK-python-project-scaffold | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
+| TASK-synthesizer | Implement text-to-MP3 synthesis with progress callbacks | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-loader, TASK-chapter-parser | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
+| TASK-tts-engine-interface | Assemble TTSEngine class with clean public interface | P2 | Todo | [REQ-MNT-modular-ai-layer](../1-objectives/requirements/REQ-MNT-modular-ai-layer.md) | TASK-synthesizer | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
+| TASK-default-voice-config | Configure and document default model, voice, and language (Italian) | P2 | Todo | [REQ-F-default-voice-quality](../1-objectives/requirements/REQ-F-default-voice-quality.md) | TASK-tts-engine-interface | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
 
 ### Frontend
 
@@ -73,17 +79,6 @@
 | TASK-monitoring-view | Implement monitoring view: job list, error details, resource usage | P2 | Todo | [REQ-F-job-monitoring](../1-objectives/requirements/REQ-F-job-monitoring.md), [REQ-F-resource-monitoring](../1-objectives/requirements/REQ-F-resource-monitoring.md) | TASK-job-monitoring-api, TASK-resource-monitoring-api | 2026-03-12 | |
 | TASK-audiobook-download-ui | Add download button to library view | P2 | Todo | [REQ-F-download-audiobook](../1-objectives/requirements/REQ-F-download-audiobook.md) | TASK-audiobook-download-api, TASK-library-view | 2026-03-12 | |
 | TASK-model-cache-ui | Add cache view with disk usage and delete to model management | P2 | Todo | [REQ-F-model-cache-view](../1-objectives/requirements/REQ-F-model-cache-view.md), [REQ-F-model-delete](../1-objectives/requirements/REQ-F-model-delete.md) | TASK-model-cache-api, TASK-model-management-view | 2026-03-12 | |
-
-### TTS Engine
-
-| ID | Task | Priority | Status | Req | Dependencies | Updated | Notes |
-|----|------|----------|--------|-----|--------------|---------|-------|
-| TASK-gpu-validator | Implement NVIDIA GPU/CUDA detection and VRAM availability checking | P1 | Todo | [REQ-F-gpu-validation](../1-objectives/requirements/REQ-F-gpu-validation.md) | TASK-python-project-scaffold | 2026-03-12 | |
-| TASK-model-loader | Implement HuggingFace model download, caching, and GPU loading | P1 | Todo | [REQ-F-model-download](../1-objectives/requirements/REQ-F-model-download.md) | TASK-gpu-validator | 2026-03-12 | |
-| TASK-chapter-parser | Implement chapter structure detection and text splitting | P1 | Todo | [REQ-F-chapter-split-output](../1-objectives/requirements/REQ-F-chapter-split-output.md) | TASK-python-project-scaffold | 2026-03-12 | |
-| TASK-synthesizer | Implement text-to-MP3 synthesis with progress callbacks | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-loader, TASK-chapter-parser | 2026-03-12 | |
-| TASK-tts-engine-interface | Assemble TTSEngine class with clean public interface | P2 | Todo | [REQ-MNT-modular-ai-layer](../1-objectives/requirements/REQ-MNT-modular-ai-layer.md) | TASK-synthesizer | 2026-03-12 | |
-| TASK-default-voice-config | Configure and document default model, voice, and language (Italian) | P2 | Todo | [REQ-F-default-voice-quality](../1-objectives/requirements/REQ-F-default-voice-quality.md) | TASK-tts-engine-interface | 2026-03-12 | |
 
 ### Deploy & Operations
 
@@ -114,14 +109,14 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 5. TASK-vite-dev-proxy
 6. TASK-static-file-serving
 
-### Phase 2: TTS Engine Foundation
+### Phase 2: TTS Engine Foundation (Backend Subpackage)
 
 **Capabilities delivered:**
 - GPU and CUDA validation at startup with clear error messages
 - HuggingFace model download, caching, and GPU loading
 - Chapter detection and text splitting
 - Text-to-MP3 synthesis with progress callbacks
-- Clean TTSEngine interface usable independently of web framework
+- Clean TTSEngine interface within the backend component (`DEC-tts-as-backend-module`)
 
 **Tasks:**
 1. TASK-gpu-validator

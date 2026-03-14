@@ -24,6 +24,7 @@ This phase defines **how** we're building the system. Focus on architecture, dat
 | [DEC-sqlite-metadata](decisions/DEC-sqlite-metadata.md) | SQLite for Metadata Storage | When defining data models or storage patterns |
 | [DEC-single-process](decisions/DEC-single-process.md) | Monolithic Single-Process Architecture | When defining component boundaries, background processing, or deployment |
 | [DEC-sse-progress](decisions/DEC-sse-progress.md) | Server-Sent Events for Real-Time Updates | When implementing progress reporting or live status updates |
+| [DEC-tts-as-backend-module](decisions/DEC-tts-as-backend-module.md) | TTS Engine as Backend Submodule | When defining component boundaries or modifying architecture |
 
 ---
 

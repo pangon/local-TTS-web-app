@@ -17,14 +17,8 @@ This phase contains the **implementation**. Focus on clean, tested, maintainable
 ### Backend
 
 - **Directory**: [`backend/`](backend/)
-- **Technology**: Python, FastAPI, Uvicorn, SQLite
-- **Responsibility**: HTTP request handling, REST API, SSE endpoint, application services (Library, Job, Model, Monitor), SQLite storage, and static file serving
-
-### TTS Engine
-
-- **Directory**: [`tts-engine/`](tts-engine/)
-- **Technology**: Python, PyTorch, HuggingFace Transformers/Hub
-- **Responsibility**: All TTS inference and GPU interaction — standalone Python module independent of the web framework
+- **Technology**: Python, FastAPI, Uvicorn, SQLite, PyTorch, HuggingFace Transformers/Hub
+- **Responsibility**: HTTP request handling, REST API, SSE endpoint, application services (Library, Job, Model, Monitor), SQLite storage, static file serving, and TTS inference via a modular subpackage (`DEC-tts-as-backend-module`)
 
 ---
 

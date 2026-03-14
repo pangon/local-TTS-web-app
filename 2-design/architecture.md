@@ -46,7 +46,7 @@ graph TB
             MonSvc[Monitor Service]
         end
 
-        subgraph "TTS Engine &#40;modular&#41;"
+        subgraph "TTS Subpackage &#40;modular&#41;"
             Synth[Synthesizer]
             ModelLoader[Model Loader]
             GPUVal[GPU Validator]
@@ -96,7 +96,7 @@ graph TB
 - Serves the Vue 3 SPA as static files (production build)
 - Provides REST API endpoints for all application services
 - Provides SSE endpoint for real-time progress updates (`REQ-F-synthesis-progress`)
-- On startup: validates GPU/CUDA availability via the TTS Engine (`REQ-F-gpu-validation`)
+- On startup: validates GPU/CUDA availability via the TTS subpackage (`REQ-F-gpu-validation`)
 - On startup: displays the UI URL to the user (`REQ-USA-simple-setup`)
 
 ### Vue 3 Frontend (SPA)
@@ -154,13 +154,13 @@ graph TB
 - Reports currently loaded model info (`REQ-F-resource-monitoring`)
 - Exposes job status and history (`REQ-F-job-monitoring`)
 
-### TTS Engine (Modular)
+### TTS Subpackage (Modular)
 
 **Responsibility**: All TTS inference and GPU interaction, independent of the web framework.
 
-This is a standalone Python module with a clean interface boundary (`REQ-MNT-modular-ai-layer`). It can be invoked from the web application or independently (e.g., via CLI or script).
+This is a dedicated subpackage within the backend component (`DEC-tts-as-backend-module`) with a clean interface boundary (`REQ-MNT-modular-ai-layer`). It is imported by backend application services via direct function calls (`DEC-single-process`). The dependency is unidirectional: services → TTS subpackage, never the reverse.
 
-**Sub-components**:
+**Modules**:
 
 - **GPU Validator** — Verifies NVIDIA GPU + CUDA availability at startup; checks VRAM before model load (`REQ-F-gpu-validation`).
 - **Model Loader** — Loads HuggingFace TTS models onto GPU; manages download and local cache via the HuggingFace Hub API (`REQ-F-model-download`).
@@ -233,8 +233,8 @@ All dependencies are free and open-source (`REQ-COMP-foss-only`, `CON-zero-budge
 | Requirement | Priority | Component(s) |
 |-------------|----------|--------------|
 | `REQ-F-upload-text-file` | Must-have | REST API, Vue Frontend |
-| `REQ-F-synthesize-audiobook` | Must-have | Job Service, TTS Engine |
-| `REQ-F-chapter-split-output` | Must-have | TTS Engine (Chapter Parser) |
+| `REQ-F-synthesize-audiobook` | Must-have | Job Service, TTS Subpackage |
+| `REQ-F-chapter-split-output` | Must-have | TTS Subpackage (Chapter Parser) |
 | `REQ-F-synthesis-progress` | Must-have | Job Service, SSE Endpoint, Vue Frontend |
 | `REQ-F-disk-space-preflight` | Must-have | Job Service |
 | `REQ-F-library-listing` | Must-have | Library Service, Vue Frontend |
@@ -242,23 +242,23 @@ All dependencies are free and open-source (`REQ-COMP-foss-only`, `CON-zero-budge
 | `REQ-F-playback-resume` | Must-have | Library Service, Vue Frontend |
 | `REQ-F-delete-audiobook` | Must-have | Library Service |
 | `REQ-F-model-listing` | Must-have | Model Service |
-| `REQ-F-model-download` | Must-have | Model Service, TTS Engine |
-| `REQ-F-gpu-validation` | Must-have | TTS Engine (GPU Validator), Web Server |
+| `REQ-F-model-download` | Must-have | Model Service, TTS Subpackage |
+| `REQ-F-gpu-validation` | Must-have | TTS Subpackage (GPU Validator), Web Server |
 | `REQ-PORT-linux-windows` | Must-have | All (cross-platform APIs) |
 | `REQ-COMP-foss-only` | Must-have | All (dependency selection) |
 | `REQ-SEC-localhost-binding` | Must-have | Web Server |
 | `REQ-F-download-audiobook` | Should-have | Library Service, Vue Frontend |
-| `REQ-F-voice-language-selection` | Should-have | TTS Engine, Vue Frontend |
+| `REQ-F-voice-language-selection` | Should-have | TTS Subpackage, Vue Frontend |
 | `REQ-F-job-monitoring` | Should-have | Job Service, Monitor Service, Vue Frontend |
-| `REQ-F-resource-monitoring` | Should-have | Monitor Service, TTS Engine, Vue Frontend |
+| `REQ-F-resource-monitoring` | Should-have | Monitor Service, TTS Subpackage, Vue Frontend |
 | `REQ-USA-simple-setup` | Should-have | Web Server (startup sequence) |
 | `REQ-F-performance-logging` | Should-have | Job Service |
-| `REQ-MNT-modular-ai-layer` | Should-have | TTS Engine |
+| `REQ-MNT-modular-ai-layer` | Should-have | TTS Subpackage |
 | `REQ-F-model-cache-view` | Should-have | Model Service |
 | `REQ-F-model-delete` | Should-have | Model Service |
-| `REQ-F-text-preview` | Should-have | Job Service, TTS Engine, Vue Frontend |
-| `REQ-PERF-synthesis-latency` | Should-have | TTS Engine |
-| `REQ-F-default-voice-quality` | Should-have | TTS Engine, Model Service |
+| `REQ-F-text-preview` | Should-have | Job Service, TTS Subpackage, Vue Frontend |
+| `REQ-PERF-synthesis-latency` | Should-have | TTS Subpackage |
+| `REQ-F-default-voice-quality` | Should-have | TTS Subpackage, Model Service |
 | `REQ-PORT-browser-compat` | Should-have | Vue Frontend |
 
 ## Design Risks
