@@ -5,12 +5,17 @@ cleaned up when the app shuts down.
 """
 
 import sqlite3
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from local_tts.app import create_app, lifespan
 from local_tts.db import get_db_path
+from local_tts.tts.gpu_validator import GPUInfo
+
+FAKE_GPU_INFO = GPUInfo(
+    name="Test GPU", vram_total_mb=8192.0, vram_free_mb=7000.0, cuda_version="12.1"
+)
 
 
 @pytest.fixture
@@ -20,7 +25,13 @@ def data_dir(tmp_path):
 
 @pytest.fixture
 def app(data_dir):
-    with patch("local_tts.config.DATA_DIR", data_dir):
+    with (
+        patch("local_tts.config.DATA_DIR", data_dir),
+        patch("local_tts.app.TTSEngine") as MockEngine,
+    ):
+        engine_instance = MagicMock()
+        engine_instance.validate_gpu.return_value = FAKE_GPU_INFO
+        MockEngine.return_value = engine_instance
         yield create_app()
 
 
