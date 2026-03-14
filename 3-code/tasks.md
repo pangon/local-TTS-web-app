@@ -40,6 +40,7 @@
 | TASK-sqlite-schema-init | Implement SQLite database initialization with full schema on startup | P0 | Done | - | TASK-fastapi-app-skeleton | 2026-03-14 | |
 | TASK-static-file-serving | Configure FastAPI to serve Vue production build as static files | P0 | Done | - | TASK-fastapi-app-skeleton, TASK-vue-project-scaffold | 2026-03-14 | |
 | TASK-startup-gpu-check | Integrate GPU validation into FastAPI startup sequence | P1 | Todo | [REQ-F-gpu-validation](../1-objectives/requirements/REQ-F-gpu-validation.md) | TASK-fastapi-app-skeleton, TASK-tts-engine-interface | 2026-03-12 | |
+| TASK-startup-ffmpeg-check | Validate ffmpeg availability at startup with clear error message | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-fastapi-app-skeleton, TASK-synthesizer | 2026-03-14 | ffmpeg is a system dependency required by pydub for MP3 encoding |
 | TASK-sse-endpoint | Implement SSE endpoint with keepalive and event broadcasting | P0 | Todo | - | TASK-fastapi-app-skeleton | 2026-03-12 | |
 | TASK-model-service | Implement Model Service and API: list, download, load with VRAM check | P1 | Todo | [REQ-F-model-listing](../1-objectives/requirements/REQ-F-model-listing.md), [REQ-F-model-download](../1-objectives/requirements/REQ-F-model-download.md), [REQ-F-gpu-validation](../1-objectives/requirements/REQ-F-gpu-validation.md) | TASK-tts-engine-interface | 2026-03-12 | |
 | TASK-model-download-sse | Wire model download progress to SSE events | P1 | Todo | [REQ-F-model-download](../1-objectives/requirements/REQ-F-model-download.md) | TASK-model-service, TASK-sse-endpoint | 2026-03-12 | |
@@ -60,7 +61,7 @@
 | TASK-gpu-validator | Implement NVIDIA GPU/CUDA detection and VRAM availability checking | P1 | Done | [REQ-F-gpu-validation](../1-objectives/requirements/REQ-F-gpu-validation.md) | TASK-python-project-scaffold | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
 | TASK-model-loader | Implement HuggingFace model download, caching, and GPU loading | P1 | Done | [REQ-F-model-download](../1-objectives/requirements/REQ-F-model-download.md) | TASK-gpu-validator | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
 | TASK-chapter-parser | Implement chapter structure detection and text splitting | P1 | Done | [REQ-F-chapter-split-output](../1-objectives/requirements/REQ-F-chapter-split-output.md) | TASK-python-project-scaffold | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
-| TASK-synthesizer | Implement text-to-MP3 synthesis with progress callbacks | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-loader, TASK-chapter-parser | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
+| TASK-synthesizer | Implement text-to-MP3 synthesis with progress callbacks | P1 | Done | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-loader, TASK-chapter-parser | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
 | TASK-tts-engine-interface | Assemble TTSEngine class with clean public interface | P2 | Todo | [REQ-MNT-modular-ai-layer](../1-objectives/requirements/REQ-MNT-modular-ai-layer.md) | TASK-synthesizer | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
 | TASK-default-voice-config | Configure and document default model, voice, and language (Italian) | P2 | Todo | [REQ-F-default-voice-quality](../1-objectives/requirements/REQ-F-default-voice-quality.md) | TASK-tts-engine-interface | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
 
@@ -113,6 +114,7 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 
 **Capabilities delivered:**
 - GPU and CUDA validation at startup with clear error messages
+- ffmpeg availability validation at startup with clear error messages
 - HuggingFace model download, caching, and GPU loading
 - Chapter detection and text splitting
 - Text-to-MP3 synthesis with progress callbacks
@@ -125,6 +127,7 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 4. TASK-synthesizer
 5. TASK-tts-engine-interface
 6. TASK-startup-gpu-check
+7. TASK-startup-ffmpeg-check
 
 ### Phase 3: Model Management End-to-End
 
