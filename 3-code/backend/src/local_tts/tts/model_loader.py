@@ -24,16 +24,18 @@ logger = logging.getLogger(__name__)
 _VRAM_OVERHEAD_FACTOR = 1.5
 
 COMPATIBLE_MODELS: dict[str, str] = {
-    "facebook/mms-tts-eng": "MMS TTS English",
-    "facebook/mms-tts-ita": "MMS TTS Italian",
-    "facebook/mms-tts-fra": "MMS TTS French",
-    "facebook/mms-tts-deu": "MMS TTS German",
-    "facebook/mms-tts-spa": "MMS TTS Spanish",
-    "facebook/mms-tts-por": "MMS TTS Portuguese",
-    "facebook/mms-tts-rus": "MMS TTS Russian",
-    "facebook/mms-tts-jpn": "MMS TTS Japanese",
-    "facebook/mms-tts-zho": "MMS TTS Chinese",
-    "facebook/mms-tts-kor": "MMS TTS Korean",
+    "ResembleAI/chatterbox": "Chatterbox Multilingual (MIT, 23 langs incl. Italian)",
+    "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice": "Qwen3-TTS 1.7B (Apache 2.0, 10 langs incl. Italian)",
+    "FunAudioLLM/Fun-CosyVoice3-0.5B-2512": "CosyVoice 3 0.5B (Apache 2.0, 9 langs incl. Italian)",
+    "hexgrad/Kokoro-82M": "Kokoro 82M (Apache 2.0, Italian voices: if_sara, im_nicola)",
+    "bosonai/higgs-audio-v2-generation-3B-base": "Higgs Audio V2 3B (Apache 2.0, Italian partial)",
+    "coqui/XTTS-v2": "XTTS-v2 (MPL-2.0/CPML, 17 langs, first-class Italian)",
+    "fishaudio/fish-speech-1.5": "Fish Speech v1.5 (CC-BY-NC-SA, Italian <10K hrs)",
+    "canopylabs/orpheus-3b-0.1-ft": "Orpheus TTS 3B (Apache 2.0, Italian experimental)",
+    "SWivid/F5-TTS": "F5-TTS (MIT/CC-BY-NC, Italian cross-lingual only)",
+    "parler-tts/parler-tts-mini-multilingual-v1.1": "Parler-TTS Mini Multilingual (Apache 2.0, 8 langs incl. Italian)",
+    "Zyphra/Zonos-v0.1-transformer": "Zonos 1.6B (Apache 2.0, Italian limited)",
+    "nari-labs/Dia-1.6B-0626": "Dia 1.6B (Apache 2.0, English only)",
 }
 
 
@@ -139,7 +141,7 @@ class ModelLoader:
         """Download a model to the local HuggingFace cache.
 
         Args:
-            model_id: HuggingFace model ID (e.g., "facebook/mms-tts-eng").
+            model_id: HuggingFace model ID (e.g., "ResembleAI/chatterbox").
             progress_callback: Called with progress percentage (0-100).
 
         Raises:

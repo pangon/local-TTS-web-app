@@ -121,7 +121,7 @@ class TTSEngine:
         """Download a model to the local HuggingFace cache.
 
         Args:
-            model_id: HuggingFace model ID (e.g., "facebook/mms-tts-eng").
+            model_id: HuggingFace model ID (e.g., "ResembleAI/chatterbox").
             progress_callback: Called with progress percentage (0-100).
 
         Raises:

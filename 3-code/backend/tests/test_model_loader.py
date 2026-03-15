@@ -64,21 +64,21 @@ class TestListModels:
     @patch("local_tts.tts.model_loader.scan_cache_dir")
     def test_cached_flag_set_when_in_cache(self, mock_scan, loader: ModelLoader):
         mock_scan.return_value = _make_scan_result(
-            [_make_cache_repo("facebook/mms-tts-eng")]
+            [_make_cache_repo("ResembleAI/chatterbox")]
         )
         models = loader.list_models()
         by_id = {m.model_id: m for m in models}
-        assert by_id["facebook/mms-tts-eng"].is_cached is True
-        assert by_id["facebook/mms-tts-ita"].is_cached is False
+        assert by_id["ResembleAI/chatterbox"].is_cached is True
+        assert by_id["coqui/XTTS-v2"].is_cached is False
 
     @patch("local_tts.tts.model_loader.scan_cache_dir")
     def test_loaded_flag_set_for_loaded_model(self, mock_scan, loader: ModelLoader):
         mock_scan.return_value = _make_scan_result([])
-        loader._loaded_model_id = "facebook/mms-tts-fra"
+        loader._loaded_model_id = "hexgrad/Kokoro-82M"
         models = loader.list_models()
         by_id = {m.model_id: m for m in models}
-        assert by_id["facebook/mms-tts-fra"].is_loaded is True
-        assert by_id["facebook/mms-tts-eng"].is_loaded is False
+        assert by_id["hexgrad/Kokoro-82M"].is_loaded is True
+        assert by_id["ResembleAI/chatterbox"].is_loaded is False
 
 
 # ---------------------------------------------------------------------------
