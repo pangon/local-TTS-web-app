@@ -87,7 +87,7 @@
 |----|------|----------|--------|-----|--------------|---------|-------|
 | TASK-startup-script | Create cross-platform startup script for Linux and Windows | P2 | Todo | [REQ-USA-simple-setup](../1-objectives/requirements/REQ-USA-simple-setup.md), [REQ-PORT-linux-windows](../1-objectives/requirements/REQ-PORT-linux-windows.md) | TASK-fastapi-app-skeleton, TASK-static-file-serving | 2026-03-12 | |
 | TASK-setup-documentation | Write setup instructions with dependencies, system requirements, and quickstart | P2 | Todo | [REQ-USA-simple-setup](../1-objectives/requirements/REQ-USA-simple-setup.md) | TASK-startup-script | 2026-03-12 | |
-| TASK-phase-3-manual-testing | Create runbook and document build/run/test commands for model management capabilities | P1 | Todo | - | TASK-model-management-view | 2026-03-15 | Covers phases 1-3 |
+| TASK-phase-3-manual-testing | Create runbook and document build/run/test commands for model management capabilities | P1 | Done | - | TASK-model-management-view | 2026-03-15 | Covers phases 1-3 |
 | TASK-phase-4-manual-testing | Update runbook and component docs for audiobook synthesis capabilities | P1 | Todo | - | TASK-audiobook-creation-view | 2026-03-15 | |
 | TASK-phase-5-manual-testing | Update runbook and component docs for library and playback capabilities | P1 | Todo | - | TASK-playback-view | 2026-03-15 | |
 | TASK-phase-6-manual-testing | Update runbook and component docs for voice selection and text preview capabilities | P2 | Todo | - | TASK-text-preview-view | 2026-03-15 | |
