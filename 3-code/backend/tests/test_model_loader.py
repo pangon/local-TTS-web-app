@@ -407,3 +407,18 @@ class TestProgressTqdm:
         tqdm_cls = _make_progress_tqdm("test-model", cb)
         with tqdm_cls(total=1000) as bar:
             bar.update(100)
+
+    @patch("local_tts.tts.model_loader.hf_model_info")
+    def test_tqdm_wrapper_is_tqdm_subclass(self, mock_info):
+        """Regression: wrapper must be a real tqdm subclass for full huggingface_hub compat."""
+        from tqdm.auto import tqdm as tqdm_base
+
+        from local_tts.tts.model_loader import _make_progress_tqdm
+
+        mock_info.return_value = _make_model_info([_make_sibling(1000)])
+        cb = MagicMock()
+
+        tqdm_cls = _make_progress_tqdm("test-model", cb)
+        assert issubclass(tqdm_cls, tqdm_base)
+        assert callable(getattr(tqdm_cls, "get_lock", None))
+        assert callable(getattr(tqdm_cls, "set_lock", None))

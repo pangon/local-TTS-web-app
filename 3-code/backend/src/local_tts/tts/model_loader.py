@@ -258,7 +258,15 @@ def _make_progress_tqdm(
     model_id: str,
     callback: Callable[[int], None],
 ) -> type:
-    """Create a tqdm-compatible class that reports aggregate download progress."""
+    """Create a tqdm subclass that reports aggregate download progress.
+
+    Subclasses the real ``tqdm.tqdm`` so that the full interface
+    (iteration, locking, display methods) is inherited.  Only
+    ``update`` is overridden to forward byte-level progress to a
+    percentage-based *callback*.
+    """
+    from tqdm.auto import tqdm as _tqdm_base
+
     try:
         info = hf_model_info(model_id, files_metadata=True)
         total_size = sum(
@@ -269,39 +277,20 @@ def _make_progress_tqdm(
 
     state = {"downloaded": 0, "last_pct": -1}
 
-    class _ProgressTqdm:
-        """Minimal tqdm-compatible wrapper forwarding progress to a callback."""
+    class _ProgressTqdm(_tqdm_base):  # type: ignore[misc]
+        """tqdm subclass forwarding progress to a callback."""
 
-        def __init__(self, *args, **kwargs):
-            pass
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            kwargs["disable"] = True  # suppress terminal output
+            super().__init__(*args, **kwargs)
 
-        def update(self, n: int = 1) -> None:
-            state["downloaded"] += n
+        def update(self, n: float = 1) -> bool | None:
+            state["downloaded"] += int(n)
             if total_size > 0:
                 pct = min(int(state["downloaded"] / total_size * 100), 99)
                 if pct != state["last_pct"]:
                     state["last_pct"] = pct
                     callback(pct)
-
-        def close(self) -> None:
-            pass
-
-        def set_description(self, *args: object, **kwargs: object) -> None:
-            pass
-
-        def set_postfix(self, *args: object, **kwargs: object) -> None:
-            pass
-
-        def set_postfix_str(self, *args: object, **kwargs: object) -> None:
-            pass
-
-        def refresh(self, *args: object, **kwargs: object) -> None:
-            pass
-
-        def __enter__(self) -> _ProgressTqdm:
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            self.close()
+            return super().update(n)
 
     return _ProgressTqdm
