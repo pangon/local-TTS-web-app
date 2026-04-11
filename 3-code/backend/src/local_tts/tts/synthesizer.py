@@ -1,6 +1,6 @@
 """Text-to-MP3 synthesis with progress callbacks.
 
-Converts text chapters to MP3 audio files using a loaded TTS model on GPU.
+Converts text chapters to MP3 audio files using a model adapter on GPU.
 Text is split into sentences for optimal synthesis quality, and sentences
 are synthesized individually then concatenated. Requires ffmpeg installed
 on the system for MP3 encoding via pydub.
@@ -12,13 +12,15 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
-import torch
 from pydub import AudioSegment
 
 from local_tts.tts.chapter_parser import Chapter
+
+if TYPE_CHECKING:
+    from local_tts.tts.adapters import ModelAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -54,15 +56,13 @@ def split_into_sentences(text: str) -> list[str]:
 
 def synthesize_segment(
     text: str,
-    model: torch.nn.Module,
-    tokenizer: object,
+    adapter: ModelAdapter,
 ) -> np.ndarray:
     """Synthesize a single text segment to a waveform numpy array.
 
     Args:
         text: Text to synthesize (typically one sentence).
-        model: Loaded TTS model on GPU.
-        tokenizer: Tokenizer matching the loaded model.
+        adapter: Loaded model adapter providing inference.
 
     Returns:
         1-D float32 numpy array of audio samples.
@@ -71,14 +71,7 @@ def synthesize_segment(
         SynthesisError: If inference fails.
     """
     try:
-        inputs = tokenizer(text, return_tensors="pt")
-        inputs = {k: v.to(model.device) for k, v in inputs.items()}
-
-        with torch.no_grad():
-            output = model(**inputs)
-
-        waveform = output.waveform.squeeze().cpu().numpy().astype(np.float32)
-        return waveform
+        return adapter.synthesize(text)
     except Exception as exc:
         raise SynthesisError(f"Failed to synthesize text segment: {exc}") from exc
 
@@ -115,9 +108,7 @@ def encode_to_mp3(
 
 def synthesize_chapter(
     text: str,
-    model: torch.nn.Module,
-    tokenizer: object,
-    sample_rate: int,
+    adapter: ModelAdapter,
     output_path: Path,
 ) -> float:
     """Synthesize a chapter's text to an MP3 file.
@@ -127,9 +118,7 @@ def synthesize_chapter(
 
     Args:
         text: Full chapter text.
-        model: Loaded TTS model on GPU.
-        tokenizer: Tokenizer matching the loaded model.
-        sample_rate: Model's audio sample rate in Hz.
+        adapter: Loaded model adapter providing inference and sample rate.
         output_path: Path where the MP3 file will be written.
 
     Returns:
@@ -138,6 +127,7 @@ def synthesize_chapter(
     Raises:
         SynthesisError: If synthesis or encoding fails.
     """
+    sample_rate = adapter.sample_rate
     sentences = split_into_sentences(text)
 
     if not sentences:
@@ -151,7 +141,7 @@ def synthesize_chapter(
 
     waveforms: list[np.ndarray] = []
     for sentence in sentences:
-        waveform = synthesize_segment(sentence, model, tokenizer)
+        waveform = synthesize_segment(sentence, adapter)
         waveforms.append(waveform)
         waveforms.append(silence)
 
@@ -165,9 +155,7 @@ def synthesize_chapter(
 
 def synthesize_chapters(
     chapters: list[Chapter],
-    model: torch.nn.Module,
-    tokenizer: object,
-    sample_rate: int,
+    adapter: ModelAdapter,
     output_dir: Path,
     progress_callback: Callable[[int], None] | None = None,
 ) -> list[SynthesisResult]:
@@ -178,9 +166,7 @@ def synthesize_chapters(
 
     Args:
         chapters: Chapters to synthesize (from chapter_parser.parse_chapters).
-        model: Loaded TTS model on GPU.
-        tokenizer: Tokenizer matching the loaded model.
-        sample_rate: Model's audio sample rate in Hz.
+        adapter: Loaded model adapter providing inference and sample rate.
         output_dir: Directory where MP3 files will be written.
         progress_callback: Called with overall percentage (0-100) after each
             chapter completes.
@@ -206,9 +192,7 @@ def synthesize_chapters(
 
         duration = synthesize_chapter(
             text=chapter.text,
-            model=model,
-            tokenizer=tokenizer,
-            sample_rate=sample_rate,
+            adapter=adapter,
             output_path=output_path,
         )
 

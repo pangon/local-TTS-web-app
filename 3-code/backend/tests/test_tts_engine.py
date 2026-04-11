@@ -175,21 +175,16 @@ class TestSynthesize:
         results = [SynthesisResult(1, "chapter-01.mp3", 5.0)]
         mock_synth.return_value = results
 
-        mock_model = MagicMock()
-        mock_model.config.sampling_rate = 16000
-        mock_tokenizer = MagicMock()
+        mock_adapter = MagicMock()
         engine._model_loader = MagicMock()
-        engine._model_loader.model = mock_model
-        engine._model_loader.tokenizer = mock_tokenizer
+        engine._model_loader.adapter = mock_adapter
 
         out = engine.synthesize("Hello.", tmp_path)
         assert out == results
         mock_parse.assert_called_once_with("Hello.")
         mock_synth.assert_called_once_with(
             chapters=chapters,
-            model=mock_model,
-            tokenizer=mock_tokenizer,
-            sample_rate=16000,
+            adapter=mock_adapter,
             output_dir=tmp_path,
             progress_callback=None,
         )
@@ -201,39 +196,19 @@ class TestSynthesize:
 
 class TestSynthesizeChapters:
     @patch("local_tts.tts.engine.synthesize_chapters")
-    def test_uses_model_sample_rate(self, mock_synth, engine, tmp_path):
+    def test_passes_adapter_from_model_loader(self, mock_synth, engine, tmp_path):
         from local_tts.tts.chapter_parser import Chapter
 
-        mock_model = MagicMock()
-        mock_model.config.sampling_rate = 22050
-        mock_tokenizer = MagicMock()
+        mock_adapter = MagicMock()
         engine._model_loader = MagicMock()
-        engine._model_loader.model = mock_model
-        engine._model_loader.tokenizer = mock_tokenizer
+        engine._model_loader.adapter = mock_adapter
 
         chapters = [Chapter(number=1, title="Ch 1", text="Hi.")]
         mock_synth.return_value = [SynthesisResult(1, "chapter-01.mp3", 2.0)]
 
         engine.synthesize_chapters(chapters, tmp_path)
         mock_synth.assert_called_once()
-        assert mock_synth.call_args.kwargs["sample_rate"] == 22050
-
-    @patch("local_tts.tts.engine.synthesize_chapters")
-    def test_falls_back_to_16000_when_no_sampling_rate(self, mock_synth, engine, tmp_path):
-        from local_tts.tts.chapter_parser import Chapter
-
-        mock_model = MagicMock(spec=[])
-        mock_model.config = MagicMock(spec=[])
-        mock_tokenizer = MagicMock()
-        engine._model_loader = MagicMock()
-        engine._model_loader.model = mock_model
-        engine._model_loader.tokenizer = mock_tokenizer
-
-        chapters = [Chapter(number=1, title="Ch 1", text="Hi.")]
-        mock_synth.return_value = [SynthesisResult(1, "chapter-01.mp3", 2.0)]
-
-        engine.synthesize_chapters(chapters, tmp_path)
-        assert mock_synth.call_args.kwargs["sample_rate"] == 16000
+        assert mock_synth.call_args.kwargs["adapter"] is mock_adapter
 
 
 # ---------------------------------------------------------------------------

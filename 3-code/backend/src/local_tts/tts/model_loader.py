@@ -2,7 +2,8 @@
 
 Manages the lifecycle of TTS models: downloading from HuggingFace Hub,
 checking cache status, verifying disk space, and loading onto GPU with
-VRAM preflight checks.
+VRAM preflight checks.  Model loading and inference are delegated to
+model-specific adapters (see ``local_tts.tts.adapters``).
 """
 
 from __future__ import annotations
@@ -15,8 +16,8 @@ from typing import Callable
 
 import torch
 from huggingface_hub import model_info as hf_model_info, scan_cache_dir, snapshot_download
-from transformers import AutoModel, AutoTokenizer
 
+from local_tts.tts.adapters import ModelAdapter, get_adapter, has_adapter
 from local_tts.tts.gpu_validator import check_vram
 
 logger = logging.getLogger(__name__)
@@ -66,29 +67,28 @@ class ModelLoader:
     """Manages HuggingFace TTS model download, caching, and GPU loading.
 
     Models are stored in the HuggingFace Hub default cache directory.
-    Only one model can be loaded on the GPU at a time.
+    Only one model can be loaded on the GPU at a time.  Loading and
+    inference are delegated to model-specific adapters.
     """
 
     def __init__(self) -> None:
         self._loaded_model_id: str | None = None
-        self._model: torch.nn.Module | None = None
-        self._tokenizer: object | None = None
+        self._adapter: ModelAdapter | None = None
 
     @property
     def loaded_model_id(self) -> str | None:
         return self._loaded_model_id
 
     @property
-    def model(self) -> torch.nn.Module:
-        if self._model is None:
-            raise ModelLoadError("No model is currently loaded")
-        return self._model
+    def adapter(self) -> ModelAdapter:
+        """The adapter for the currently loaded model.
 
-    @property
-    def tokenizer(self) -> object:
-        if self._tokenizer is None:
+        Raises:
+            ModelLoadError: If no model is loaded.
+        """
+        if self._adapter is None:
             raise ModelLoadError("No model is currently loaded")
-        return self._tokenizer
+        return self._adapter
 
     def list_models(self) -> list[ModelInfo]:
         cached_ids = self._get_cached_model_ids()
@@ -170,18 +170,24 @@ class ModelLoader:
             ) from exc
 
     def load_model(self, model_id: str) -> None:
-        """Load a cached model onto the GPU.
+        """Load a cached model onto the GPU via its model adapter.
 
         Checks VRAM availability before loading. Unloads any previously
         loaded model first.
 
         Raises:
-            ModelLoadError: If the model is not cached, VRAM is insufficient,
-                or loading fails.
+            ModelLoadError: If no adapter is available for the model, the
+                model is not cached, VRAM is insufficient, or loading fails.
         """
         if self._loaded_model_id == model_id:
             logger.info("Model %s is already loaded", model_id)
             return
+
+        if not has_adapter(model_id):
+            raise ModelLoadError(
+                f"No adapter available for model {model_id}. "
+                "This model cannot be loaded yet."
+            )
 
         if not self.is_cached(model_id):
             raise ModelLoadError(
@@ -206,18 +212,15 @@ class ModelLoader:
 
         logger.info("Loading model %s onto GPU", model_id)
         try:
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                model_id, trust_remote_code=True,
-            )
-            self._model = AutoModel.from_pretrained(
-                model_id, trust_remote_code=True,
-            ).to("cuda")
+            adapter = get_adapter(model_id)
+            assert adapter is not None  # guarded by has_adapter above
+            adapter.load(model_id, "cuda")
+            self._adapter = adapter
             self._loaded_model_id = model_id
             logger.info("Model %s loaded successfully", model_id)
         except Exception as exc:
             logger.exception("Failed to load model %s", model_id)
-            self._model = None
-            self._tokenizer = None
+            self._adapter = None
             self._loaded_model_id = None
             raise ModelLoadError(
                 f"Failed to load model {model_id}: {exc}"
@@ -228,8 +231,9 @@ class ModelLoader:
         if self._loaded_model_id is None:
             return
         logger.info("Unloading model %s", self._loaded_model_id)
-        self._model = None
-        self._tokenizer = None
+        if self._adapter is not None:
+            self._adapter.unload()
+        self._adapter = None
         self._loaded_model_id = None
         if torch.cuda.is_available():
             torch.cuda.empty_cache()

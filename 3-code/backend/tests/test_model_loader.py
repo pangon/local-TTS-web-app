@@ -1,18 +1,21 @@
 """Tests for the model_loader module.
 
 Covers: listing models, cache detection, disk space checks, download with
-progress callbacks, GPU loading with VRAM preflight, and unloading.
-All external dependencies (huggingface_hub, transformers, torch) are mocked.
+progress callbacks, GPU loading with VRAM preflight via adapters, and unloading.
+All external dependencies (huggingface_hub, torch, adapters) are mocked.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 
+from local_tts.tts.adapters import ModelAdapter, _ADAPTER_REGISTRY
 from local_tts.tts.gpu_validator import VRAMCheckResult
 from local_tts.tts.model_loader import (
     COMPATIBLE_MODELS,
@@ -21,6 +24,43 @@ from local_tts.tts.model_loader import (
     ModelLoadError,
     ModelLoader,
 )
+
+
+class _FakeAdapter:
+    """Minimal adapter for testing model loading."""
+
+    def __init__(self) -> None:
+        self._loaded = False
+
+    def load(self, model_id: str, device: str) -> None:
+        self._loaded = True
+
+    def synthesize(self, text: str, **kwargs: Any) -> np.ndarray:
+        return np.zeros(16000, dtype=np.float32)
+
+    @property
+    def sample_rate(self) -> int:
+        return 16000
+
+    def unload(self) -> None:
+        self._loaded = False
+
+
+class _FailingAdapter:
+    """Adapter whose load always fails."""
+
+    def load(self, model_id: str, device: str) -> None:
+        raise RuntimeError("CUDA OOM")
+
+    def synthesize(self, text: str, **kwargs: Any) -> np.ndarray:
+        return np.zeros(1, dtype=np.float32)
+
+    @property
+    def sample_rate(self) -> int:
+        return 16000
+
+    def unload(self) -> None:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -230,100 +270,102 @@ class TestDownloadModel:
 # ---------------------------------------------------------------------------
 
 class TestLoadModel:
-    @patch("local_tts.tts.model_loader.AutoModel")
-    @patch("local_tts.tts.model_loader.AutoTokenizer")
     @patch("local_tts.tts.model_loader.check_vram")
     @patch("local_tts.tts.model_loader.scan_cache_dir")
-    def test_loads_cached_model(self, mock_scan, mock_vram, mock_tok, mock_model, loader):
-        mock_scan.return_value = _make_scan_result(
-            [_make_cache_repo("facebook/mms-tts-eng", 200 * 1024 * 1024)]
-        )
-        mock_vram.return_value = VRAMCheckResult(sufficient=True, required_mb=300, available_mb=8000)
-        mock_pretrained = MagicMock()
-        mock_model.from_pretrained.return_value = mock_pretrained
-        mock_pretrained.to.return_value = mock_pretrained
+    def test_loads_cached_model_via_adapter(self, mock_scan, mock_vram, loader):
+        _ADAPTER_REGISTRY["facebook/mms-tts-eng"] = _FakeAdapter
+        try:
+            mock_scan.return_value = _make_scan_result(
+                [_make_cache_repo("facebook/mms-tts-eng", 200 * 1024 * 1024)]
+            )
+            mock_vram.return_value = VRAMCheckResult(sufficient=True, required_mb=300, available_mb=8000)
 
-        loader.load_model("facebook/mms-tts-eng")
+            loader.load_model("facebook/mms-tts-eng")
 
-        assert loader.loaded_model_id == "facebook/mms-tts-eng"
-        mock_model.from_pretrained.assert_called_once_with(
-            "facebook/mms-tts-eng", trust_remote_code=True,
-        )
-        mock_pretrained.to.assert_called_once_with("cuda")
-        mock_tok.from_pretrained.assert_called_once_with(
-            "facebook/mms-tts-eng", trust_remote_code=True,
-        )
+            assert loader.loaded_model_id == "facebook/mms-tts-eng"
+            assert isinstance(loader._adapter, _FakeAdapter)
+            assert loader._adapter._loaded is True
+        finally:
+            _ADAPTER_REGISTRY.pop("facebook/mms-tts-eng", None)
+
+    def test_raises_when_no_adapter_available(self, loader):
+        with pytest.raises(ModelLoadError, match="No adapter available"):
+            loader.load_model("facebook/mms-tts-eng")
 
     @patch("local_tts.tts.model_loader.scan_cache_dir")
     def test_raises_when_not_cached(self, mock_scan, loader):
-        mock_scan.return_value = _make_scan_result([])
-        with pytest.raises(ModelLoadError, match="not cached"):
-            loader.load_model("facebook/mms-tts-eng")
+        _ADAPTER_REGISTRY["facebook/mms-tts-eng"] = _FakeAdapter
+        try:
+            mock_scan.return_value = _make_scan_result([])
+            with pytest.raises(ModelLoadError, match="not cached"):
+                loader.load_model("facebook/mms-tts-eng")
+        finally:
+            _ADAPTER_REGISTRY.pop("facebook/mms-tts-eng", None)
 
     @patch("local_tts.tts.model_loader.check_vram")
     @patch("local_tts.tts.model_loader.scan_cache_dir")
     def test_raises_on_insufficient_vram(self, mock_scan, mock_vram, loader):
-        mock_scan.return_value = _make_scan_result(
-            [_make_cache_repo("facebook/mms-tts-eng", 4000 * 1024 * 1024)]
-        )
-        mock_vram.return_value = VRAMCheckResult(sufficient=False, required_mb=6000, available_mb=2000)
-        with pytest.raises(ModelLoadError, match="Insufficient VRAM"):
-            loader.load_model("facebook/mms-tts-eng")
+        _ADAPTER_REGISTRY["facebook/mms-tts-eng"] = _FakeAdapter
+        try:
+            mock_scan.return_value = _make_scan_result(
+                [_make_cache_repo("facebook/mms-tts-eng", 4000 * 1024 * 1024)]
+            )
+            mock_vram.return_value = VRAMCheckResult(sufficient=False, required_mb=6000, available_mb=2000)
+            with pytest.raises(ModelLoadError, match="Insufficient VRAM"):
+                loader.load_model("facebook/mms-tts-eng")
+        finally:
+            _ADAPTER_REGISTRY.pop("facebook/mms-tts-eng", None)
 
-    @patch("local_tts.tts.model_loader.AutoModel")
-    @patch("local_tts.tts.model_loader.AutoTokenizer")
-    @patch("local_tts.tts.model_loader.check_vram")
-    @patch("local_tts.tts.model_loader.scan_cache_dir")
-    def test_skips_reload_of_same_model(self, mock_scan, mock_vram, mock_tok, mock_model, loader):
+    def test_skips_reload_of_same_model(self, loader):
         loader._loaded_model_id = "facebook/mms-tts-eng"
-        loader._model = MagicMock()
-        loader._tokenizer = MagicMock()
+        loader._adapter = _FakeAdapter()
         loader.load_model("facebook/mms-tts-eng")
-        mock_model.from_pretrained.assert_not_called()
+        # No error means it returned early without attempting reload
 
     @patch("local_tts.tts.model_loader.torch")
-    @patch("local_tts.tts.model_loader.AutoModel")
-    @patch("local_tts.tts.model_loader.AutoTokenizer")
     @patch("local_tts.tts.model_loader.check_vram")
     @patch("local_tts.tts.model_loader.scan_cache_dir")
     def test_unloads_previous_model_before_loading_new(
-        self, mock_scan, mock_vram, mock_tok, mock_model, mock_torch, loader
+        self, mock_scan, mock_vram, mock_torch, loader
     ):
-        mock_torch.cuda.is_available.return_value = True
-        mock_scan.return_value = _make_scan_result(
-            [_make_cache_repo("facebook/mms-tts-ita", 200 * 1024 * 1024)]
-        )
-        mock_vram.return_value = VRAMCheckResult(sufficient=True, required_mb=300, available_mb=8000)
-        mock_pretrained = MagicMock()
-        mock_model.from_pretrained.return_value = mock_pretrained
-        mock_pretrained.to.return_value = mock_pretrained
+        _ADAPTER_REGISTRY["facebook/mms-tts-ita"] = _FakeAdapter
+        try:
+            mock_torch.cuda.is_available.return_value = True
+            mock_scan.return_value = _make_scan_result(
+                [_make_cache_repo("facebook/mms-tts-ita", 200 * 1024 * 1024)]
+            )
+            mock_vram.return_value = VRAMCheckResult(sufficient=True, required_mb=300, available_mb=8000)
 
-        loader._loaded_model_id = "facebook/mms-tts-eng"
-        loader._model = MagicMock()
-        loader._tokenizer = MagicMock()
+            old_adapter = _FakeAdapter()
+            old_adapter._loaded = True
+            loader._loaded_model_id = "facebook/mms-tts-eng"
+            loader._adapter = old_adapter
 
-        loader.load_model("facebook/mms-tts-ita")
+            loader.load_model("facebook/mms-tts-ita")
 
-        assert loader.loaded_model_id == "facebook/mms-tts-ita"
-        mock_torch.cuda.empty_cache.assert_called_once()
+            assert loader.loaded_model_id == "facebook/mms-tts-ita"
+            assert old_adapter._loaded is False  # unload was called
+            mock_torch.cuda.empty_cache.assert_called_once()
+        finally:
+            _ADAPTER_REGISTRY.pop("facebook/mms-tts-ita", None)
 
-    @patch("local_tts.tts.model_loader.AutoModel")
-    @patch("local_tts.tts.model_loader.AutoTokenizer")
     @patch("local_tts.tts.model_loader.check_vram")
     @patch("local_tts.tts.model_loader.scan_cache_dir")
-    def test_cleans_up_on_load_failure(self, mock_scan, mock_vram, mock_tok, mock_model, loader):
-        mock_scan.return_value = _make_scan_result(
-            [_make_cache_repo("facebook/mms-tts-eng", 200 * 1024 * 1024)]
-        )
-        mock_vram.return_value = VRAMCheckResult(sufficient=True, required_mb=300, available_mb=8000)
-        mock_model.from_pretrained.side_effect = RuntimeError("CUDA OOM")
+    def test_cleans_up_on_load_failure(self, mock_scan, mock_vram, loader):
+        _ADAPTER_REGISTRY["facebook/mms-tts-eng"] = _FailingAdapter
+        try:
+            mock_scan.return_value = _make_scan_result(
+                [_make_cache_repo("facebook/mms-tts-eng", 200 * 1024 * 1024)]
+            )
+            mock_vram.return_value = VRAMCheckResult(sufficient=True, required_mb=300, available_mb=8000)
 
-        with pytest.raises(ModelLoadError, match="Failed to load"):
-            loader.load_model("facebook/mms-tts-eng")
+            with pytest.raises(ModelLoadError, match="Failed to load"):
+                loader.load_model("facebook/mms-tts-eng")
 
-        assert loader.loaded_model_id is None
-        assert loader._model is None
-        assert loader._tokenizer is None
+            assert loader.loaded_model_id is None
+            assert loader._adapter is None
+        finally:
+            _ADAPTER_REGISTRY.pop("facebook/mms-tts-eng", None)
 
 
 # ---------------------------------------------------------------------------
@@ -334,15 +376,16 @@ class TestUnloadModel:
     @patch("local_tts.tts.model_loader.torch")
     def test_unloads_and_clears_cache(self, mock_torch, loader):
         mock_torch.cuda.is_available.return_value = True
+        fake_adapter = _FakeAdapter()
+        fake_adapter._loaded = True
         loader._loaded_model_id = "facebook/mms-tts-eng"
-        loader._model = MagicMock()
-        loader._tokenizer = MagicMock()
+        loader._adapter = fake_adapter
 
         loader.unload_model()
 
         assert loader._loaded_model_id is None
-        assert loader._model is None
-        assert loader._tokenizer is None
+        assert loader._adapter is None
+        assert fake_adapter._loaded is False  # adapter.unload() was called
         mock_torch.cuda.empty_cache.assert_called_once()
 
     def test_noop_when_nothing_loaded(self, loader):
@@ -355,13 +398,14 @@ class TestUnloadModel:
 # ---------------------------------------------------------------------------
 
 class TestProperties:
-    def test_model_raises_when_none(self, loader):
+    def test_adapter_raises_when_none(self, loader):
         with pytest.raises(ModelLoadError, match="No model"):
-            _ = loader.model
+            _ = loader.adapter
 
-    def test_tokenizer_raises_when_none(self, loader):
-        with pytest.raises(ModelLoadError, match="No model"):
-            _ = loader.tokenizer
+    def test_adapter_returns_when_loaded(self, loader):
+        fake_adapter = _FakeAdapter()
+        loader._adapter = fake_adapter
+        assert loader.adapter is fake_adapter
 
     def test_loaded_model_id_defaults_none(self, loader):
         assert loader.loaded_model_id is None

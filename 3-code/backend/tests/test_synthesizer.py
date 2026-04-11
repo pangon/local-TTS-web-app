@@ -2,14 +2,14 @@
 
 Covers: sentence splitting, single-segment synthesis, MP3 encoding,
 chapter synthesis, multi-chapter synthesis with progress callbacks.
-All GPU/model dependencies are mocked.
+All GPU/model dependencies are mocked via adapter fakes.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -33,37 +33,45 @@ from local_tts.tts.synthesizer import (
 SAMPLE_RATE = 16000
 
 
-def _make_mock_model(sample_rate: int = SAMPLE_RATE) -> MagicMock:
-    """Create a mock TTS model that returns a deterministic waveform."""
-    model = MagicMock()
-    model.device = "cpu"
+class _FakeAdapter:
+    """Fake model adapter for testing synthesis."""
 
-    def forward(**kwargs):
-        # Generate a short sine wave as fake audio (0.1 seconds)
-        num_samples = sample_rate // 10
+    def __init__(self, sr: int = SAMPLE_RATE) -> None:
+        self._sr = sr
+        self.call_count = 0
+
+    def load(self, model_id: str, device: str) -> None:
+        pass
+
+    def synthesize(self, text: str, **kwargs: Any) -> np.ndarray:
+        self.call_count += 1
+        num_samples = self._sr // 10  # 0.1 seconds of audio
         t = np.linspace(0, 0.1, num_samples, dtype=np.float32)
-        waveform = np.sin(2 * np.pi * 440 * t)
-        import torch
+        return np.sin(2 * np.pi * 440 * t).astype(np.float32)
 
-        return SimpleNamespace(waveform=torch.tensor(waveform).unsqueeze(0))
+    @property
+    def sample_rate(self) -> int:
+        return self._sr
 
-    model.__call__ = forward
-    model.side_effect = forward
-    return model
+    def unload(self) -> None:
+        pass
 
 
-def _make_mock_tokenizer() -> MagicMock:
-    """Create a mock tokenizer that returns dummy input tensors."""
-    import torch
+class _FailingAdapter:
+    """Adapter whose synthesize always fails."""
 
-    tokenizer = MagicMock()
+    def load(self, model_id: str, device: str) -> None:
+        pass
 
-    def tokenize(text, return_tensors=None):
-        return {"input_ids": torch.tensor([[1, 2, 3]])}
+    def synthesize(self, text: str, **kwargs: Any) -> np.ndarray:
+        raise RuntimeError("CUDA error")
 
-    tokenizer.side_effect = tokenize
-    tokenizer.__call__ = tokenize
-    return tokenizer
+    @property
+    def sample_rate(self) -> int:
+        return SAMPLE_RATE
+
+    def unload(self) -> None:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -112,26 +120,21 @@ class TestSplitIntoSentences:
 
 class TestSynthesizeSegment:
     def test_returns_numpy_array(self):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
-        result = synthesize_segment("Hello world", model, tokenizer)
+        adapter = _FakeAdapter()
+        result = synthesize_segment("Hello world", adapter)
         assert isinstance(result, np.ndarray)
         assert result.dtype == np.float32
         assert len(result) > 0
 
-    def test_calls_model_with_tokenized_input(self):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
-        synthesize_segment("Test text", model, tokenizer)
-        tokenizer.assert_called_once_with("Test text", return_tensors="pt")
+    def test_delegates_to_adapter(self):
+        adapter = _FakeAdapter()
+        synthesize_segment("Test text", adapter)
+        assert adapter.call_count == 1
 
     def test_raises_synthesis_error_on_failure(self):
-        model = MagicMock()
-        model.device = "cpu"
-        model.side_effect = RuntimeError("CUDA OOM")
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FailingAdapter()
         with pytest.raises(SynthesisError, match="Failed to synthesize"):
-            synthesize_segment("Test", model, tokenizer)
+            synthesize_segment("Test", adapter)
 
 
 # ---------------------------------------------------------------------------
@@ -181,41 +184,34 @@ class TestEncodeToMp3:
 
 class TestSynthesizeChapter:
     def test_synthesizes_text_to_mp3(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         output = tmp_path / "chapter.mp3"
         duration = synthesize_chapter(
-            "Hello world. How are you?", model, tokenizer, SAMPLE_RATE, output
+            "Hello world. How are you?", adapter, output
         )
         assert output.exists()
         assert duration > 0
 
     def test_empty_text_produces_silence(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         output = tmp_path / "empty.mp3"
-        duration = synthesize_chapter(
-            "", model, tokenizer, SAMPLE_RATE, output
-        )
+        duration = synthesize_chapter("", adapter, output)
         assert output.exists()
         assert duration > 0
-        # Model should not have been called for empty text
-        model.assert_not_called()
+        # Adapter should not have been called for empty text
+        assert adapter.call_count == 0
 
     def test_multiple_sentences_concatenated(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         output = tmp_path / "multi.mp3"
         duration = synthesize_chapter(
             "First sentence. Second sentence. Third sentence.",
-            model,
-            tokenizer,
-            SAMPLE_RATE,
+            adapter,
             output,
         )
         assert output.exists()
-        # Model should be called 3 times (once per sentence)
-        assert model.call_count == 3
+        # Adapter should be called 3 times (once per sentence)
+        assert adapter.call_count == 3
         assert duration > 0
 
 
@@ -236,12 +232,9 @@ class TestSynthesizeChapters:
         ]
 
     def test_produces_one_mp3_per_chapter(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         chapters = self._make_chapters(3)
-        results = synthesize_chapters(
-            chapters, model, tokenizer, SAMPLE_RATE, tmp_path
-        )
+        results = synthesize_chapters(chapters, adapter, tmp_path)
         assert len(results) == 3
         for result in results:
             mp3_path = tmp_path / result.audio_filename
@@ -249,25 +242,19 @@ class TestSynthesizeChapters:
             assert mp3_path.stat().st_size > 0
 
     def test_filenames_follow_convention(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         chapters = self._make_chapters(2)
-        results = synthesize_chapters(
-            chapters, model, tokenizer, SAMPLE_RATE, tmp_path
-        )
+        results = synthesize_chapters(chapters, adapter, tmp_path)
         assert results[0].audio_filename == "chapter-01.mp3"
         assert results[1].audio_filename == "chapter-02.mp3"
 
     def test_progress_callback_called(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         chapters = self._make_chapters(4)
         progress_values: list[int] = []
         results = synthesize_chapters(
             chapters,
-            model,
-            tokenizer,
-            SAMPLE_RATE,
+            adapter,
             tmp_path,
             progress_callback=progress_values.append,
         )
@@ -275,66 +262,46 @@ class TestSynthesizeChapters:
         assert progress_values == [25, 50, 75, 100]
 
     def test_progress_callback_single_chapter(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         chapters = self._make_chapters(1)
         progress_values: list[int] = []
         synthesize_chapters(
             chapters,
-            model,
-            tokenizer,
-            SAMPLE_RATE,
+            adapter,
             tmp_path,
             progress_callback=progress_values.append,
         )
         assert progress_values == [100]
 
     def test_no_callback_no_error(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         chapters = self._make_chapters(1)
-        results = synthesize_chapters(
-            chapters, model, tokenizer, SAMPLE_RATE, tmp_path
-        )
+        results = synthesize_chapters(chapters, adapter, tmp_path)
         assert len(results) == 1
 
     def test_creates_output_directory(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         chapters = self._make_chapters(1)
         output_dir = tmp_path / "new_dir"
-        results = synthesize_chapters(
-            chapters, model, tokenizer, SAMPLE_RATE, output_dir
-        )
+        results = synthesize_chapters(chapters, adapter, output_dir)
         assert output_dir.exists()
         assert len(results) == 1
 
     def test_results_contain_correct_chapter_numbers(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         chapters = self._make_chapters(3)
-        results = synthesize_chapters(
-            chapters, model, tokenizer, SAMPLE_RATE, tmp_path
-        )
+        results = synthesize_chapters(chapters, adapter, tmp_path)
         assert [r.chapter_number for r in results] == [1, 2, 3]
 
     def test_results_contain_positive_durations(self, tmp_path: Path):
-        model = _make_mock_model()
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FakeAdapter()
         chapters = self._make_chapters(2)
-        results = synthesize_chapters(
-            chapters, model, tokenizer, SAMPLE_RATE, tmp_path
-        )
+        results = synthesize_chapters(chapters, adapter, tmp_path)
         for result in results:
             assert result.duration_seconds > 0
 
     def test_synthesis_error_propagates(self, tmp_path: Path):
-        model = MagicMock()
-        model.device = "cpu"
-        model.side_effect = RuntimeError("CUDA error")
-        tokenizer = _make_mock_tokenizer()
+        adapter = _FailingAdapter()
         chapters = self._make_chapters(1)
         with pytest.raises(SynthesisError):
-            synthesize_chapters(
-                chapters, model, tokenizer, SAMPLE_RATE, tmp_path
-            )
+            synthesize_chapters(chapters, adapter, tmp_path)

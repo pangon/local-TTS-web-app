@@ -210,17 +210,11 @@ class TTSEngine:
             ModelLoadError: If no model is loaded.
             SynthesisError: If synthesis fails.
         """
-        model = self._model_loader.model
-        tokenizer = self._model_loader.tokenizer
-
-        # MMS TTS models use a fixed 16 kHz sample rate
-        sample_rate = getattr(model.config, "sampling_rate", 16000)
+        adapter = self._model_loader.adapter
 
         return synthesize_chapters(
             chapters=chapters,
-            model=model,
-            tokenizer=tokenizer,
-            sample_rate=sample_rate,
+            adapter=adapter,
             output_dir=output_dir,
             progress_callback=progress_callback,
         )
