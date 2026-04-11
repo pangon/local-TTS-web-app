@@ -30,8 +30,8 @@ from local_tts.tts.model_loader import DiskSpaceCheck, ModelInfo, ModelLoadError
 def mock_tts_engine() -> MagicMock:
     engine = MagicMock()
     engine.list_models.return_value = [
-        ModelInfo("facebook/mms-tts-eng", "MMS TTS English", is_cached=True, is_loaded=False),
-        ModelInfo("facebook/mms-tts-ita", "MMS TTS Italian", is_cached=False, is_loaded=False),
+        ModelInfo("facebook/mms-tts-eng", "MMS TTS English", is_cached=True, is_loaded=False, loader_available=True),
+        ModelInfo("facebook/mms-tts-ita", "MMS TTS Italian", is_cached=False, is_loaded=False, loader_available=False),
     ]
     engine.is_model_cached.return_value = False
     engine.check_disk_space.return_value = DiskSpaceCheck(

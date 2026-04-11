@@ -48,6 +48,7 @@ class ModelInfo:
     name: str
     is_cached: bool
     is_loaded: bool
+    loader_available: bool
 
 
 @dataclass(frozen=True)
@@ -98,6 +99,7 @@ class ModelLoader:
                 name=name,
                 is_cached=mid in cached_ids,
                 is_loaded=mid == self._loaded_model_id,
+                loader_available=has_adapter(mid),
             )
             for mid, name in COMPATIBLE_MODELS.items()
         ]

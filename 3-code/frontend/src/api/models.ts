@@ -5,6 +5,7 @@ export interface Model {
   name: string
   is_cached: boolean
   is_loaded: boolean
+  loader_available: boolean
 }
 
 export interface DownloadResponse {

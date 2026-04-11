@@ -34,8 +34,8 @@ def _create_test_app() -> tuple:
 
     mock_service = MagicMock(spec=ModelService)
     mock_service.list_models.return_value = [
-        ModelInfo("facebook/mms-tts-eng", "MMS TTS English", is_cached=True, is_loaded=True),
-        ModelInfo("facebook/mms-tts-ita", "MMS TTS Italian", is_cached=False, is_loaded=False),
+        ModelInfo("facebook/mms-tts-eng", "MMS TTS English", is_cached=True, is_loaded=True, loader_available=True),
+        ModelInfo("facebook/mms-tts-ita", "MMS TTS Italian", is_cached=False, is_loaded=False, loader_available=False),
     ]
     mock_service.is_model_cached.return_value = False
     mock_service.is_downloading.return_value = False
@@ -78,7 +78,16 @@ class TestListModelsEndpoint:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get("/api/v1/models")
         model = resp.json()[0]
-        assert set(model.keys()) == {"model_id", "name", "is_cached", "is_loaded"}
+        assert set(model.keys()) == {"model_id", "name", "is_cached", "is_loaded", "loader_available"}
+
+    @pytest.mark.anyio
+    async def test_loader_available_reflected_in_response(self, test_app):
+        app, _ = test_app
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get("/api/v1/models")
+        data = resp.json()
+        assert data[0]["loader_available"] is True
+        assert data[1]["loader_available"] is False
 
 
 # ---------------------------------------------------------------------------

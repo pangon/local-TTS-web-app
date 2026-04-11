@@ -131,9 +131,11 @@ function isDownloading(modelId: string): boolean {
         </div>
 
         <div class="model-actions">
-          <!-- Download button: shown when not cached and not currently downloading -->
+          <span v-if="!model.loader_available" class="badge badge-no-adapter">No adapter</span>
+
+          <!-- Download button: shown when not cached, has adapter, and not currently downloading -->
           <button
-            v-if="!model.is_cached && !isDownloading(model.model_id)"
+            v-if="model.loader_available && !model.is_cached && !isDownloading(model.model_id)"
             @click="startDownload(model.model_id)"
           >
             Download
@@ -153,9 +155,9 @@ function isDownloading(modelId: string): boolean {
             {{ downloadErrors[model.model_id] }}
           </p>
 
-          <!-- Load button: shown when cached but not loaded -->
+          <!-- Load button: shown when cached, has adapter, but not loaded -->
           <button
-            v-if="model.is_cached && !model.is_loaded"
+            v-if="model.loader_available && model.is_cached && !model.is_loaded"
             :disabled="loadingModelId !== null"
             @click="startLoad(model.model_id)"
           >
@@ -240,6 +242,11 @@ function isDownloading(modelId: string): boolean {
 .badge-remote {
   background: #f5f5f5;
   color: #757575;
+}
+
+.badge-no-adapter {
+  background: #fff3e0;
+  color: #e65100;
 }
 
 .model-actions {

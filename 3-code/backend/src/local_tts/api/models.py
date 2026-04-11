@@ -25,6 +25,7 @@ class ModelResponse(BaseModel):
     name: str
     is_cached: bool
     is_loaded: bool
+    loader_available: bool
 
 
 class DownloadResponse(BaseModel):
@@ -65,6 +66,7 @@ async def list_models(request: Request) -> list[ModelResponse]:
             name=m.name,
             is_cached=m.is_cached,
             is_loaded=m.is_loaded,
+            loader_available=m.loader_available,
         )
         for m in models
     ]

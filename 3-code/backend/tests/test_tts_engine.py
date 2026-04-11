@@ -87,7 +87,7 @@ class TestLoadedModelId:
 class TestListModels:
     @patch.object(TTSEngine, "_model_loader", create=True)
     def test_delegates_to_model_loader(self, mock_loader, engine):
-        models = [ModelInfo("facebook/mms-tts-eng", "MMS TTS English", True, False)]
+        models = [ModelInfo("facebook/mms-tts-eng", "MMS TTS English", True, False, False)]
         engine._model_loader = MagicMock()
         engine._model_loader.list_models.return_value = models
         assert engine.list_models() == models

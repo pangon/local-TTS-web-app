@@ -320,10 +320,13 @@ Returns compatible HuggingFace TTS models with cache and load status (`REQ-F-mod
     "model_id": "facebook/mms-tts-eng",
     "name": "MMS TTS English",
     "is_cached": true,
-    "is_loaded": false
+    "is_loaded": false,
+    "loader_available": true
   }
 ]
 ```
+
+`loader_available` indicates whether a model-specific adapter is implemented. Models without an adapter cannot be downloaded or loaded — the frontend hides these actions (see architecture § Adapter Pattern).
 
 ### Download Model
 
