@@ -12,6 +12,7 @@ Step-by-step instructions to build, run, and manually test the Local TTS Web App
 - Node.js ^20.19.0 or >= 22.12.0 (managed via nvm)
 - NVIDIA GPU with CUDA drivers (required for TTS inference; GPU validation runs at startup)
 - ffmpeg installed and on PATH (required for MP3 encoding)
+- espeak-ng installed and on PATH (required for non-English TTS with Kokoro; install via `sudo apt-get install espeak-ng` on Debian/Ubuntu)
 - Git (to clone the repository)
 
 ## Environment Setup

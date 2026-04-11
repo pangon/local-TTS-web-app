@@ -15,7 +15,7 @@ import pytest
 import torch
 
 from local_tts.tts.adapters import ModelAdapter
-from local_tts.tts.adapters.kokoro import KokoroAdapter, _SAMPLE_RATE
+from local_tts.tts.adapters.kokoro import KokoroAdapter, _ESPEAK_REQUIRED_LANGS, _SAMPLE_RATE
 
 
 # ---------------------------------------------------------------------------
@@ -187,8 +187,9 @@ class TestKokoroAdapterSynthesize:
 # ---------------------------------------------------------------------------
 
 class TestKokoroAdapterLanguageSwitching:
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value="/usr/bin/espeak-ng")
     @patch("kokoro.KPipeline")
-    def test_language_kwarg_switches_pipeline(self, mock_kpipeline):
+    def test_language_kwarg_switches_pipeline(self, mock_kpipeline, _mock_which):
         adapter = _loaded_adapter()
         original_model = adapter._model
 
@@ -216,6 +217,44 @@ class TestKokoroAdapterLanguageSwitching:
 
         # Pipeline should not have been replaced
         assert adapter._pipeline is original_pipeline
+
+
+# ---------------------------------------------------------------------------
+# espeak-ng validation
+# ---------------------------------------------------------------------------
+
+class TestEspeakValidation:
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value=None)
+    def test_raises_when_espeak_missing_for_non_english(self, _mock_which):
+        with pytest.raises(RuntimeError, match="espeak-ng is required"):
+            KokoroAdapter._check_espeak("i")
+
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value=None)
+    def test_error_message_includes_install_instructions(self, _mock_which):
+        with pytest.raises(RuntimeError, match="sudo apt-get install espeak-ng"):
+            KokoroAdapter._check_espeak("i")
+
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value="/usr/bin/espeak-ng")
+    def test_passes_when_espeak_installed(self, _mock_which):
+        KokoroAdapter._check_espeak("i")  # Should not raise
+
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value=None)
+    def test_english_does_not_require_espeak(self, _mock_which):
+        KokoroAdapter._check_espeak("a")  # Should not raise
+        KokoroAdapter._check_espeak("b")  # Should not raise
+
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value=None)
+    def test_all_espeak_langs_are_checked(self, _mock_which):
+        for lang in _ESPEAK_REQUIRED_LANGS:
+            with pytest.raises(RuntimeError, match="espeak-ng is required"):
+                KokoroAdapter._check_espeak(lang)
+
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value=None)
+    @patch("kokoro.KPipeline")
+    def test_language_switch_checks_espeak(self, _mock_kpipeline, _mock_which):
+        adapter = _loaded_adapter()
+        with pytest.raises(RuntimeError, match="espeak-ng is required"):
+            adapter.synthesize("Ciao", voice="if_sara", language="i")
 
 
 # ---------------------------------------------------------------------------

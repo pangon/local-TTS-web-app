@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import gc
 import logging
+import shutil
 from typing import Any
 
 import numpy as np
@@ -25,6 +26,10 @@ _SAMPLE_RATE = 24000
 
 # Default language code used when none is specified in kwargs.
 _DEFAULT_LANG_CODE = "a"  # American English
+
+# Language codes that require espeak-ng for G2P conversion.
+# English ('a', 'b') uses misaki's built-in G2P and does not need espeak-ng.
+_ESPEAK_REQUIRED_LANGS: frozenset[str] = frozenset("efhipz")
 
 
 class KokoroAdapter:
@@ -131,9 +136,31 @@ class KokoroAdapter:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _check_espeak(lang_code: str) -> None:
+        """Raise a clear error if espeak-ng is needed but not installed."""
+        if lang_code not in _ESPEAK_REQUIRED_LANGS:
+            return
+        if shutil.which("espeak-ng") is not None:
+            return
+        raise RuntimeError(
+            f"espeak-ng is required for Kokoro language '{lang_code}' "
+            f"but was not found on PATH.\n"
+            f"Install it with:\n"
+            f"  Ubuntu/Debian : sudo apt-get install espeak-ng\n"
+            f"  Fedora/RHEL   : sudo dnf install espeak-ng\n"
+            f"  Arch          : sudo pacman -S espeak-ng\n"
+            f"  macOS         : brew install espeak-ng\n"
+            f"  Windows       : download from "
+            f"https://github.com/espeak-ng/espeak-ng/releases\n"
+            f"After installing, restart the application."
+        )
+
     def _switch_language(self, lang_code: str) -> None:
         """Recreate the pipeline for a new language, reusing the KModel."""
         from kokoro import KPipeline
+
+        self._check_espeak(lang_code)
 
         logger.info(
             "Switching Kokoro language from %s to %s",
