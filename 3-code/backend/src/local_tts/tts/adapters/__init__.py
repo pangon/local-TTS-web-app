@@ -62,8 +62,10 @@ class ModelAdapter(Protocol):
 
 # Maps HuggingFace model ID -> concrete adapter class.
 # Each TASK-loader-* task adds its adapter here upon implementation.
+from local_tts.tts.adapters.kokoro import KokoroAdapter
+
 _ADAPTER_REGISTRY: dict[str, type[ModelAdapter]] = {
-    # "hexgrad/Kokoro-82M": KokoroAdapter,         # TASK-loader-kokoro
+    "hexgrad/Kokoro-82M": KokoroAdapter,
     # "ResembleAI/chatterbox": ChatterboxAdapter,   # TASK-loader-chatterbox
     # "coqui/XTTS-v2": XTTSv2Adapter,              # TASK-loader-xtts-v2
     # ... (added by adapter implementation tasks)

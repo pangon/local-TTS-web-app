@@ -121,10 +121,14 @@ class TestListModels:
         assert by_id["ResembleAI/chatterbox"].is_loaded is False
 
     @patch("local_tts.tts.model_loader.scan_cache_dir")
-    def test_loader_available_false_when_no_adapter(self, mock_scan, loader: ModelLoader):
+    def test_loader_available_false_for_models_without_adapter(self, mock_scan, loader: ModelLoader):
         mock_scan.return_value = _make_scan_result([])
         models = loader.list_models()
-        assert all(m.loader_available is False for m in models)
+        by_id = {m.model_id: m for m in models}
+        # Models without a registered adapter should have loader_available=False
+        assert by_id["ResembleAI/chatterbox"].loader_available is False
+        # Kokoro has a registered adapter, so it should be True
+        assert by_id["hexgrad/Kokoro-82M"].loader_available is True
 
     @patch("local_tts.tts.model_loader.scan_cache_dir")
     def test_loader_available_true_when_adapter_registered(self, mock_scan, loader: ModelLoader):

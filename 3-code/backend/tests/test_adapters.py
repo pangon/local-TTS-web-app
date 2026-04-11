@@ -94,5 +94,7 @@ class TestAdapterRegistry:
         finally:
             del _ADAPTER_REGISTRY["test/fake-model"]
 
-    def test_registry_initially_empty(self):
-        assert len(_ADAPTER_REGISTRY) == 0
+    def test_registry_contains_implemented_adapters(self):
+        # Registry should contain entries for all implemented adapters.
+        # At minimum, the Kokoro adapter is registered.
+        assert "hexgrad/Kokoro-82M" in _ADAPTER_REGISTRY
