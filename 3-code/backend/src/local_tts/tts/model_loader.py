@@ -206,11 +206,16 @@ class ModelLoader:
 
         logger.info("Loading model %s onto GPU", model_id)
         try:
-            self._tokenizer = AutoTokenizer.from_pretrained(model_id)
-            self._model = AutoModel.from_pretrained(model_id).to("cuda")
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                model_id, trust_remote_code=True,
+            )
+            self._model = AutoModel.from_pretrained(
+                model_id, trust_remote_code=True,
+            ).to("cuda")
             self._loaded_model_id = model_id
             logger.info("Model %s loaded successfully", model_id)
         except Exception as exc:
+            logger.exception("Failed to load model %s", model_id)
             self._model = None
             self._tokenizer = None
             self._loaded_model_id = None

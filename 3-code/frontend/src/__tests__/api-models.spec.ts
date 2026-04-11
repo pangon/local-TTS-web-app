@@ -70,6 +70,20 @@ describe('loadModel', () => {
     await expect(loadModel('a')).rejects.toThrow('Model not cached')
   })
 
+  it('throws with detail message on 500', async () => {
+    globalThis.fetch = mockFetchResponse(500, { detail: 'Failed to load model test/model: CUDA OOM' })
+    await expect(loadModel('a')).rejects.toThrow('Failed to load model test/model: CUDA OOM')
+  })
+
+  it('throws with generic message on 500 without parseable body', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.reject(new Error('not json')),
+    })
+    await expect(loadModel('a')).rejects.toThrow('Failed to load model: 500')
+  })
+
   it('throws with VRAM details on 409 with object detail', async () => {
     globalThis.fetch = mockFetchResponse(409, {
       detail: { detail: 'Insufficient VRAM', required_mb: 4096, available_mb: 2048 },

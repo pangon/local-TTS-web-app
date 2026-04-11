@@ -246,9 +246,13 @@ class TestLoadModel:
         loader.load_model("facebook/mms-tts-eng")
 
         assert loader.loaded_model_id == "facebook/mms-tts-eng"
-        mock_model.from_pretrained.assert_called_once_with("facebook/mms-tts-eng")
+        mock_model.from_pretrained.assert_called_once_with(
+            "facebook/mms-tts-eng", trust_remote_code=True,
+        )
         mock_pretrained.to.assert_called_once_with("cuda")
-        mock_tok.from_pretrained.assert_called_once_with("facebook/mms-tts-eng")
+        mock_tok.from_pretrained.assert_called_once_with(
+            "facebook/mms-tts-eng", trust_remote_code=True,
+        )
 
     @patch("local_tts.tts.model_loader.scan_cache_dir")
     def test_raises_when_not_cached(self, mock_scan, loader):

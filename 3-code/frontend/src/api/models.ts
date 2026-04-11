@@ -79,7 +79,10 @@ export async function loadModel(modelId: string): Promise<LoadResponse> {
     throw new Error(typeof detail === 'string' ? detail : 'Load failed')
   }
   if (!res.ok) {
-    throw new Error(`Failed to load model: ${res.status}`)
+    const body = await res.json().catch(() => null)
+    const detail = body?.detail
+    const message = typeof detail === 'string' ? detail : `Failed to load model: ${res.status}`
+    throw new Error(message)
   }
   return res.json()
 }

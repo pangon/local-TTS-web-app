@@ -163,9 +163,9 @@ This is a dedicated subpackage within the backend component (`DEC-tts-as-backend
 **Modules**:
 
 - **GPU Validator** — Verifies NVIDIA GPU + CUDA availability at startup; checks VRAM before model load (`REQ-F-gpu-validation`).
-- **Model Loader** — Loads HuggingFace TTS models onto GPU; manages download and local cache via the HuggingFace Hub API (`REQ-F-model-download`).
+- **Model Loader** — Manages model download, caching, and GPU loading. Download and cache management use a uniform HuggingFace Hub API (`REQ-F-model-download`). **Model loading uses a model adapter abstraction** — each TTS model requires a model-specific adapter because TTS models do not share a common loading or inference interface (see [Model-Specific Loading Requirements](#model-specific-loading-requirements) below).
 - **Chapter Parser** — Detects chapter structure in text; splits into chunks (`REQ-F-chapter-split-output`). Detection patterns to be refined during implementation.
-- **Synthesizer** — Converts text chunks to MP3 audio using the loaded model on GPU (`REQ-F-synthesize-audiobook`). Supports voice and language selection (`REQ-F-voice-language-selection`). Reports progress per chunk.
+- **Synthesizer** — Converts text chunks to MP3 audio using the loaded model on GPU (`REQ-F-synthesize-audiobook`). Supports voice and language selection (`REQ-F-voice-language-selection`). Reports progress per chunk. Delegates model-specific inference to the adapter provided by the Model Loader.
 
 **Interface** (conceptual):
 
@@ -260,6 +260,36 @@ All dependencies are free and open-source (`REQ-COMP-foss-only`, `CON-zero-budge
 | `REQ-PERF-synthesis-latency` | Should-have | TTS Subpackage |
 | `REQ-F-default-voice-quality` | Should-have | TTS Subpackage, Model Service |
 | `REQ-PORT-browser-compat` | Should-have | Vue Frontend |
+
+## Model-Specific Loading Requirements
+
+TTS models on HuggingFace Hub do **not** share a common loading or inference interface. Each model requires its own library, model class, or loading procedure. The generic `AutoModel.from_pretrained()` approach (even with `trust_remote_code=True`) does not work for most models. The Model Loader must provide a **model adapter abstraction** — a common `ModelAdapter` protocol that each model-specific adapter implements, covering loading, inference, and unloading.
+
+### Compatibility Table
+
+| Model ID | AutoModel Compatible | Required Library / Approach | Notes |
+|----------|---------------------|----------------------------|-------|
+| `ResembleAI/chatterbox` | No | `chatterbox-tts` pip package, `ChatterboxTTS.from_pretrained()` | Multiple weight files, no transformers config |
+| `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` | No | `qwen-tts` pip package, `Qwen3TTSModel` | `model_type: qwen3_tts` not in standard transformers; needs custom tokenizer + speech tokenizer |
+| `FunAudioLLM/Fun-CosyVoice3-0.5B-2512` | No | CosyVoice GitHub repo, custom `AutoModel` (not HuggingFace's) | Custom weight format (`.pt`, `.onnx`), no transformers-compatible structure |
+| `hexgrad/Kokoro-82M` | No | `kokoro` pip package (`>=0.9.2`), `KPipeline` | StyleTTS2/ISTFTNet architecture, `.pth` weight file |
+| `bosonai/higgs-audio-v2-generation-3B-base` | Yes (transformers>=5.3) | `HiggsAudioV2ForConditionalGeneration` or `AutoModelForTextToWaveform` | Requires transformers 5.3+; `AutoModel` may not map correctly |
+| `coqui/XTTS-v2` | No | `TTS` (Coqui) pip package, `TTS("tts_models/multilingual/multi-dataset/xtts_v2")` | Coqui trainer config, not transformers |
+| `fishaudio/fish-speech-1.5` | No | Fish Speech GitHub repo | `model_type: dual_ar` not in transformers; `.pth` format |
+| `canopylabs/orpheus-3b-0.1-ft` | Partial | `orpheus-speech` pip package, `OrpheusModel` | LLM (`LlamaForCausalLM`) loads via `AutoModelForCausalLM`, but audio decoding requires separate codec pipeline |
+| `SWivid/F5-TTS` | No | `f5-tts` pip package | Custom architecture, `.pt`/`.safetensors`, no transformers structure |
+| `parler-tts/parler-tts-mini-multilingual-v1.1` | No (without extra pkg) | `parler-tts` GitHub package, `ParlerTTSForConditionalGeneration` | `model_type: parler_tts` not in standard transformers |
+| `Zyphra/Zonos-v0.1-transformer` | No | `zonos` pip package, `Zonos.from_pretrained()` | Mamba/transformer backbone, custom config |
+| `nari-labs/Dia-1.6B-0626` | Yes (transformers>=5.x) | `DiaForConditionalGeneration` or `dia` pip package | Merged into transformers 5.x+; also has standalone `dia` library |
+
+### Adapter Pattern
+
+Each compatible model is annotated with a `loader_available` flag. Models without an implemented adapter are disabled in the frontend (both download and load are unavailable). As adapters are implemented, models become available. The `ModelAdapter` protocol defines:
+
+- `load(model_id, device) -> None` — load model and tokenizer/processor onto the specified device
+- `synthesize(text, **kwargs) -> numpy.ndarray` — run inference and return raw audio samples
+- `sample_rate -> int` — the model's output sample rate
+- `unload() -> None` — release GPU memory
 
 ## Design Risks
 

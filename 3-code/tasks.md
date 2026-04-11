@@ -64,6 +64,20 @@
 | TASK-synthesizer | Implement text-to-MP3 synthesis with progress callbacks | P1 | Done | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-loader, TASK-chapter-parser | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
 | TASK-tts-engine-interface | Assemble TTSEngine class with clean public interface | P2 | Done | [REQ-MNT-modular-ai-layer](../1-objectives/requirements/REQ-MNT-modular-ai-layer.md) | TASK-synthesizer | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
 | TASK-default-voice-config | Configure and document default model, voice, and language (Italian) | P2 | Todo | [REQ-F-default-voice-quality](../1-objectives/requirements/REQ-F-default-voice-quality.md) | TASK-tts-engine-interface | 2026-03-14 | Moved from TTS Engine section per DEC-tts-as-backend-module |
+| TASK-model-adapter-interface | Define ModelAdapter protocol and refactor ModelLoader to use adapter-based loading and inference | P1 | Todo | [REQ-F-model-download](../1-objectives/requirements/REQ-F-model-download.md), [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-loader, TASK-synthesizer | 2026-04-11 | See architecture.md § Model-Specific Loading Requirements |
+| TASK-model-loader-status | Add loader_available flag to COMPATIBLE_MODELS and expose via API; disable download and load in frontend for models without an adapter | P1 | Todo | [REQ-F-model-listing](../1-objectives/requirements/REQ-F-model-listing.md) | TASK-model-adapter-interface | 2026-04-11 | Spans backend + frontend |
+| TASK-loader-kokoro | Implement Kokoro-82M adapter using kokoro pip package (KPipeline) | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: kokoro>=0.9.2; Italian voices: if_sara, im_nicola |
+| TASK-loader-chatterbox | Implement Chatterbox adapter using chatterbox-tts pip package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: chatterbox-tts; 23 langs incl. Italian |
+| TASK-loader-xtts-v2 | Implement XTTS-v2 adapter using Coqui TTS pip package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: TTS (Coqui); first-class Italian support |
+| TASK-loader-cosyvoice | Implement CosyVoice 3 adapter using CosyVoice repo/package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: CosyVoice; 9 langs incl. Italian |
+| TASK-loader-qwen3-tts | Implement Qwen3-TTS adapter using qwen-tts pip package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: qwen-tts; 10 langs incl. Italian |
+| TASK-loader-parler-tts | Implement Parler-TTS adapter using parler-tts GitHub package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: parler-tts; 8 langs incl. Italian |
+| TASK-loader-dia | Implement Dia adapter using dia pip package or transformers>=5.x | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | English only; lower priority |
+| TASK-loader-f5-tts | Implement F5-TTS adapter using f5-tts pip package | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: f5-tts; Italian cross-lingual only |
+| TASK-loader-orpheus | Implement Orpheus TTS adapter using orpheus-speech pip package | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: orpheus-speech; Italian experimental |
+| TASK-loader-zonos | Implement Zonos adapter using zonos pip package | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: zonos; Italian limited |
+| TASK-loader-fish-speech | Implement Fish Speech adapter using Fish Speech repo | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: fish-speech; Italian <10K hrs training data |
+| TASK-loader-higgs-audio | Implement Higgs Audio V2 adapter (transformers>=5.3 or dedicated package) | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Requires transformers 5.3+; Italian partial |
 
 ### Frontend
 
@@ -88,6 +102,7 @@
 | TASK-startup-script | Create cross-platform startup script for Linux and Windows | P2 | Todo | [REQ-USA-simple-setup](../1-objectives/requirements/REQ-USA-simple-setup.md), [REQ-PORT-linux-windows](../1-objectives/requirements/REQ-PORT-linux-windows.md) | TASK-fastapi-app-skeleton, TASK-static-file-serving | 2026-03-12 | |
 | TASK-setup-documentation | Write setup instructions with dependencies, system requirements, and quickstart | P2 | Todo | [REQ-USA-simple-setup](../1-objectives/requirements/REQ-USA-simple-setup.md) | TASK-startup-script | 2026-03-12 | |
 | TASK-phase-3-manual-testing | Create runbook and document build/run/test commands for model management capabilities | P1 | Done | - | TASK-model-management-view | 2026-03-15 | Covers phases 1-3 |
+| TASK-phase-3.1-manual-testing | Update runbook and component docs for model adapter and loader capabilities | P1 | Todo | - | TASK-model-loader-status | 2026-04-11 | Covers Phase 3.1 |
 | TASK-phase-4-manual-testing | Update runbook and component docs for audiobook synthesis capabilities | P1 | Todo | - | TASK-audiobook-creation-view | 2026-03-15 | |
 | TASK-phase-5-manual-testing | Update runbook and component docs for library and playback capabilities | P1 | Todo | - | TASK-playback-view | 2026-03-15 | |
 | TASK-phase-6-manual-testing | Update runbook and component docs for voice selection and text preview capabilities | P2 | Todo | - | TASK-text-preview-view | 2026-03-15 | |
@@ -150,6 +165,31 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 4. TASK-frontend-sse-client
 5. TASK-model-management-view
 6. TASK-phase-3-manual-testing
+
+### Phase 3.1: Model Adapter Abstraction & Per-Model Loaders
+
+**Capabilities delivered:**
+- Model adapter protocol defining a common interface for loading, inference, and unloading across heterogeneous TTS models
+- Each compatible model annotated with loader availability; models without an adapter are disabled in the frontend (download and load buttons hidden)
+- Per-model adapter implementations enabling actual TTS inference for each supported model
+- System remains functional throughout: models are progressively enabled as their adapters are implemented
+
+**Tasks:**
+1. TASK-model-adapter-interface
+2. TASK-model-loader-status
+3. TASK-loader-kokoro
+4. TASK-loader-chatterbox
+5. TASK-loader-xtts-v2
+6. TASK-loader-cosyvoice
+7. TASK-loader-qwen3-tts
+8. TASK-loader-parler-tts
+9. TASK-loader-dia
+10. TASK-loader-f5-tts
+11. TASK-loader-orpheus
+12. TASK-loader-zonos
+13. TASK-loader-fish-speech
+14. TASK-loader-higgs-audio
+15. TASK-phase-3.1-manual-testing
 
 ### Phase 4: Audiobook Synthesis End-to-End
 
