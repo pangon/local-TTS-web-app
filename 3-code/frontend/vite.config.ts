@@ -17,6 +17,16 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      // SSE endpoint needs explicit timeout override to keep the
+      // long-lived streaming connection open through the Vite proxy.
+      // Without this, http-proxy may buffer or close the connection
+      // before events reach the browser (DEC-sse-progress).
+      '/api/v1/events': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        timeout: 0,
+        proxyTimeout: 0,
+      },
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,

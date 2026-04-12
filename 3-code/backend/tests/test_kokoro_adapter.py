@@ -146,11 +146,12 @@ class TestKokoroAdapterSynthesize:
         audio = adapter.synthesize("Hello world. This is a test.")
         assert len(audio) == 3000
 
-    def test_default_voice_is_if_sara(self):
+    def test_default_voice_is_im_nicola(self):
+        """Default voice is im_nicola (DEC-default-italian-language)."""
         adapter = _loaded_adapter()
         adapter.synthesize("Test")
         adapter._pipeline.assert_called_once_with(
-            "Test", voice="if_sara", speed=1.0,
+            "Test", voice="im_nicola", speed=1.0,
         )
 
     def test_custom_voice_passed_through(self):
@@ -164,7 +165,7 @@ class TestKokoroAdapterSynthesize:
         adapter = _loaded_adapter()
         adapter.synthesize("Fast speech", speed=1.5)
         adapter._pipeline.assert_called_once_with(
-            "Fast speech", voice="if_sara", speed=1.5,
+            "Fast speech", voice="im_nicola", speed=1.5,
         )
 
     def test_empty_result_returns_silence(self):

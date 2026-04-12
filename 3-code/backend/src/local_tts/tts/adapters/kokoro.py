@@ -88,7 +88,7 @@ class KokoroAdapter:
         if self._pipeline is None:
             raise RuntimeError("KokoroAdapter.load() must be called before synthesize()")
 
-        voice: str = kwargs.get("voice", "if_sara")
+        voice: str = kwargs.get("voice", "im_nicola")
         language: str | None = kwargs.get("language")
         speed: float = kwargs.get("speed", 1.0)
 

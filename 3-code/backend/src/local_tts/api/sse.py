@@ -65,6 +65,12 @@ class EventBus:
         """
         message = f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
         async with self._lock:
+            count = len(self._subscribers)
+            if count == 0:
+                logger.warning(
+                    "SSE event '%s' published but no subscribers connected",
+                    event_type,
+                )
             for queue in self._subscribers:
                 try:
                     queue.put_nowait(message)
@@ -92,6 +98,8 @@ async def _event_stream(
 ) -> Any:
     """Async generator that yields SSE messages with keepalive."""
     queue = await event_bus.subscribe()
+    subscriber_count = len(event_bus._subscribers)
+    logger.info("SSE client connected (total subscribers: %d)", subscriber_count)
     try:
         while True:
             if await request.is_disconnected():
@@ -107,6 +115,7 @@ async def _event_stream(
                 yield ":keepalive\n\n"
     finally:
         await event_bus.unsubscribe(queue)
+        logger.info("SSE client disconnected")
 
 
 @router.get("/events")

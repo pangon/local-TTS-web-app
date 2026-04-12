@@ -23,7 +23,7 @@ _DEFAULT_LANGUAGE = "Italian"
 
 # Default speaker — Vivian has a clear, expressive voice suitable for audiobooks.
 # No Italian-native speaker exists, but all speakers support cross-lingual synthesis.
-_DEFAULT_SPEAKER = "Vivian"
+_DEFAULT_SPEAKER = "Ryan"
 
 # Supported speakers in the CustomVoice model.
 SUPPORTED_SPEAKERS: tuple[str, ...] = (
