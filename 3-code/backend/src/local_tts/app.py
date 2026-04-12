@@ -134,6 +134,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
+    await app.state.event_bus.shutdown()
     job_service.shutdown()
     conn.close()
 

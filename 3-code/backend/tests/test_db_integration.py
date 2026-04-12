@@ -73,3 +73,13 @@ class TestLifespanDatabaseInit:
         # After context exit, the connection should be closed
         with pytest.raises(sqlite3.ProgrammingError):
             conn.execute("SELECT 1")
+
+    @pytest.mark.anyio
+    async def test_event_bus_shutdown_on_lifespan_exit(self, app, data_dir):
+        """SSE subscribers receive a stop sentinel when the lifespan exits."""
+        async with lifespan(app):
+            event_bus = app.state.event_bus
+            queue = await event_bus.subscribe()
+        # After context exit, the subscriber should have received None
+        sentinel = queue.get_nowait()
+        assert sentinel is None
