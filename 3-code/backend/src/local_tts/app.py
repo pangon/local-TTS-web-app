@@ -12,6 +12,7 @@ from local_tts import config
 from local_tts.api.router import api_router
 from local_tts.api.sse import EventBus
 from local_tts.db import init_db
+from local_tts.services.job_service import JobService
 from local_tts.services.model_service import ModelService
 from local_tts.spa import SPAStaticFiles
 from local_tts.tts.engine import TTSEngine
@@ -57,7 +58,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Step 3: Initialize database
     conn = init_db(config.DATA_DIR)
     app.state.db_conn = conn
+
+    # Step 4: Initialize Job Service (DEC-single-process — background thread)
+    job_service = JobService(tts_engine, conn, config.DATA_DIR)
+    app.state.job_service = job_service
+
     yield
+
+    job_service.shutdown()
     conn.close()
 
 
