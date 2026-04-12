@@ -166,30 +166,20 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 5. TASK-model-management-view
 6. TASK-phase-3-manual-testing
 
-### Phase 3.1: Model Adapter Abstraction & Per-Model Loaders
+### Phase 3.1: Model Adapter Abstraction & Kokoro Loader
 
 **Capabilities delivered:**
 - Model adapter protocol defining a common interface for loading, inference, and unloading across heterogeneous TTS models
 - Each compatible model annotated with loader availability; models without an adapter are disabled in the frontend (download and load buttons hidden)
-- Per-model adapter implementations enabling actual TTS inference for each supported model
+- Kokoro-82M adapter enabling actual TTS inference
 - System remains functional throughout: models are progressively enabled as their adapters are implemented
 
 **Tasks:**
 1. TASK-model-adapter-interface
 2. TASK-model-loader-status
 3. TASK-loader-kokoro
-4. TASK-loader-chatterbox
-5. TASK-loader-xtts-v2
-6. TASK-loader-cosyvoice
-7. TASK-loader-qwen3-tts
-8. TASK-loader-parler-tts
-9. TASK-loader-dia
-10. TASK-loader-f5-tts
-11. TASK-loader-orpheus
-12. TASK-loader-zonos
-13. TASK-loader-fish-speech
-14. TASK-loader-higgs-audio
-15. TASK-phase-3.1-manual-testing
+4. TASK-loader-qwen3-tts
+5. TASK-phase-3.1-manual-testing
 
 ### Phase 4: Audiobook Synthesis End-to-End
 
@@ -270,3 +260,21 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 1. TASK-startup-script
 2. TASK-setup-documentation
 3. TASK-phase-8-manual-testing
+
+### Phase 9: Additional Model Adapters (Optional)
+
+**Capabilities delivered:**
+- Per-model adapter implementations enabling TTS inference for additional supported models beyond Kokoro
+- Models are progressively enabled as their adapters are implemented
+
+**Tasks:**
+1. TASK-loader-chatterbox
+2. TASK-loader-xtts-v2
+3. TASK-loader-cosyvoice
+4. TASK-loader-parler-tts
+5. TASK-loader-dia
+6. TASK-loader-f5-tts
+7. TASK-loader-orpheus
+8. TASK-loader-zonos
+9. TASK-loader-fish-speech
+10. TASK-loader-higgs-audio
