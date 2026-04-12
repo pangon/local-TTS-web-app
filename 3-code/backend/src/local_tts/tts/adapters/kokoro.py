@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 # Output sample rate for Kokoro-82M (hardcoded by the model).
 _SAMPLE_RATE = 24000
 
-# Default language code used when none is specified in kwargs.
-_DEFAULT_LANG_CODE = "a"  # American English
+# Default language code used when none is specified in kwargs (DEC-default-italian-language).
+_DEFAULT_LANG_CODE = "i"  # Italian
 
 # Language codes that require espeak-ng for G2P conversion.
 # English ('a', 'b') uses misaki's built-in G2P and does not need espeak-ng.
@@ -52,9 +52,12 @@ class KokoroAdapter:
         """Load Kokoro-82M onto *device* via ``KPipeline``.
 
         The model weights are downloaded/cached by HuggingFace Hub on
-        first use.
+        first use.  Checks for espeak-ng when the default language
+        requires it (DEC-default-italian-language).
         """
         from kokoro import KPipeline
+
+        self._check_espeak(_DEFAULT_LANG_CODE)
 
         logger.info("Loading Kokoro pipeline for %s on %s", model_id, device)
         self._repo_id = model_id
@@ -85,7 +88,7 @@ class KokoroAdapter:
         if self._pipeline is None:
             raise RuntimeError("KokoroAdapter.load() must be called before synthesize()")
 
-        voice: str = kwargs.get("voice", "af_heart")
+        voice: str = kwargs.get("voice", "if_sara")
         language: str | None = kwargs.get("language")
         speed: float = kwargs.get("speed", 1.0)
 

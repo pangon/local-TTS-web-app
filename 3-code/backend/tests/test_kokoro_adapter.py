@@ -66,8 +66,9 @@ class TestKokoroAdapterProtocol:
 # ---------------------------------------------------------------------------
 
 class TestKokoroAdapterLoad:
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value="/usr/bin/espeak-ng")
     @patch("kokoro.KPipeline")
-    def test_load_creates_pipeline(self, mock_kpipeline):
+    def test_load_creates_pipeline(self, mock_kpipeline, _mock_which):
         mock_instance = MagicMock()
         mock_instance.model = MagicMock()
         mock_instance.voices = {}
@@ -77,15 +78,16 @@ class TestKokoroAdapterLoad:
         adapter.load("hexgrad/Kokoro-82M", "cuda")
 
         mock_kpipeline.assert_called_once_with(
-            lang_code="a",
+            lang_code="i",
             repo_id="hexgrad/Kokoro-82M",
             device="cuda",
         )
         assert adapter._pipeline is mock_instance
         assert adapter._model is mock_instance.model
 
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value="/usr/bin/espeak-ng")
     @patch("kokoro.KPipeline")
-    def test_load_stores_device_and_repo(self, mock_kpipeline):
+    def test_load_stores_device_and_repo(self, mock_kpipeline, _mock_which):
         mock_instance = MagicMock()
         mock_instance.model = MagicMock()
         mock_instance.voices = {}
@@ -96,7 +98,13 @@ class TestKokoroAdapterLoad:
 
         assert adapter._device == "cuda"
         assert adapter._repo_id == "hexgrad/Kokoro-82M"
-        assert adapter._current_lang_code == "a"
+        assert adapter._current_lang_code == "i"
+
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value=None)
+    def test_load_checks_espeak_for_default_language(self, _mock_which):
+        adapter = KokoroAdapter()
+        with pytest.raises(RuntimeError, match="espeak-ng is required"):
+            adapter.load("hexgrad/Kokoro-82M", "cuda")
 
     def test_unload_clears_state(self):
         adapter = KokoroAdapter()
@@ -138,11 +146,11 @@ class TestKokoroAdapterSynthesize:
         audio = adapter.synthesize("Hello world. This is a test.")
         assert len(audio) == 3000
 
-    def test_default_voice_is_af_heart(self):
+    def test_default_voice_is_if_sara(self):
         adapter = _loaded_adapter()
         adapter.synthesize("Test")
         adapter._pipeline.assert_called_once_with(
-            "Test", voice="af_heart", speed=1.0,
+            "Test", voice="if_sara", speed=1.0,
         )
 
     def test_custom_voice_passed_through(self):
@@ -156,7 +164,7 @@ class TestKokoroAdapterSynthesize:
         adapter = _loaded_adapter()
         adapter.synthesize("Fast speech", speed=1.5)
         adapter._pipeline.assert_called_once_with(
-            "Fast speech", voice="af_heart", speed=1.5,
+            "Fast speech", voice="if_sara", speed=1.5,
         )
 
     def test_empty_result_returns_silence(self):

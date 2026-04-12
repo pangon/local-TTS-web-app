@@ -289,7 +289,7 @@ class TestJobProgressSSEIntegration:
         synthesize_started = threading.Event()
         synthesize_proceed = threading.Event()
 
-        def slow_synthesize(text, output_dir, progress_callback=None):
+        def slow_synthesize(text, output_dir, progress_callback=None, **kwargs):
             synthesize_started.set()
             synthesize_proceed.wait(timeout=5.0)
             if progress_callback:
@@ -329,7 +329,7 @@ class TestJobProgressSSEIntegration:
     ):
         """A successful synthesis job publishes job-progress and job-completed events."""
 
-        def fake_synthesize(text, output_dir, progress_callback=None):
+        def fake_synthesize(text, output_dir, progress_callback=None, **kwargs):
             if progress_callback:
                 progress_callback(33)
                 progress_callback(66)

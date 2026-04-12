@@ -165,6 +165,8 @@ class TTSEngine:
         text: str,
         output_dir: Path,
         progress_callback: Callable[[int], None] | None = None,
+        voice: str | None = None,
+        language: str | None = None,
     ) -> list[SynthesisResult]:
         """Parse text into chapters and synthesize all to MP3 files.
 
@@ -176,6 +178,8 @@ class TTSEngine:
             text: Full input text to convert to audio.
             output_dir: Directory where MP3 files will be written.
             progress_callback: Called with overall percentage (0-100).
+            voice: Voice selection (adapter default if None).
+            language: Language selection (adapter default if None).
 
         Returns:
             List of SynthesisResult, one per chapter.
@@ -185,13 +189,18 @@ class TTSEngine:
             SynthesisError: If synthesis fails.
         """
         chapters = self.parse_chapters(text)
-        return self.synthesize_chapters(chapters, output_dir, progress_callback)
+        return self.synthesize_chapters(
+            chapters, output_dir, progress_callback,
+            voice=voice, language=language,
+        )
 
     def synthesize_chapters(
         self,
         chapters: list[Chapter],
         output_dir: Path,
         progress_callback: Callable[[int], None] | None = None,
+        voice: str | None = None,
+        language: str | None = None,
     ) -> list[SynthesisResult]:
         """Synthesize pre-parsed chapters to MP3 files.
 
@@ -202,6 +211,8 @@ class TTSEngine:
             chapters: Chapters to synthesize.
             output_dir: Directory where MP3 files will be written.
             progress_callback: Called with overall percentage (0-100).
+            voice: Voice selection (adapter default if None).
+            language: Language selection (adapter default if None).
 
         Returns:
             List of SynthesisResult, one per chapter.
@@ -212,9 +223,18 @@ class TTSEngine:
         """
         adapter = self._model_loader.adapter
 
+        # Build kwargs for the adapter, omitting None values so the
+        # adapter's own defaults apply when no explicit selection is made.
+        adapter_kwargs: dict[str, str] = {}
+        if voice is not None:
+            adapter_kwargs["voice"] = voice
+        if language is not None:
+            adapter_kwargs["language"] = language
+
         return synthesize_chapters(
             chapters=chapters,
             adapter=adapter,
             output_dir=output_dir,
             progress_callback=progress_callback,
+            **adapter_kwargs,
         )

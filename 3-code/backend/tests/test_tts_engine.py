@@ -210,6 +210,40 @@ class TestSynthesizeChapters:
         mock_synth.assert_called_once()
         assert mock_synth.call_args.kwargs["adapter"] is mock_adapter
 
+    @patch("local_tts.tts.engine.synthesize_chapters")
+    def test_passes_voice_and_language_kwargs(self, mock_synth, engine, tmp_path):
+        from local_tts.tts.chapter_parser import Chapter
+
+        mock_adapter = MagicMock()
+        engine._model_loader = MagicMock()
+        engine._model_loader.adapter = mock_adapter
+
+        chapters = [Chapter(number=1, title="Ch 1", text="Ciao.")]
+        mock_synth.return_value = [SynthesisResult(1, "Ch 1", "chapter-01.mp3", 2.0)]
+
+        engine.synthesize_chapters(
+            chapters, tmp_path, voice="im_nicola", language="i",
+        )
+        call_kwargs = mock_synth.call_args.kwargs
+        assert call_kwargs["voice"] == "im_nicola"
+        assert call_kwargs["language"] == "i"
+
+    @patch("local_tts.tts.engine.synthesize_chapters")
+    def test_omits_none_voice_and_language(self, mock_synth, engine, tmp_path):
+        from local_tts.tts.chapter_parser import Chapter
+
+        mock_adapter = MagicMock()
+        engine._model_loader = MagicMock()
+        engine._model_loader.adapter = mock_adapter
+
+        chapters = [Chapter(number=1, title="Ch 1", text="Hi.")]
+        mock_synth.return_value = [SynthesisResult(1, "Ch 1", "chapter-01.mp3", 2.0)]
+
+        engine.synthesize_chapters(chapters, tmp_path)
+        call_kwargs = mock_synth.call_args.kwargs
+        assert "voice" not in call_kwargs
+        assert "language" not in call_kwargs
+
 
 # ---------------------------------------------------------------------------
 # Web framework independence (REQ-MNT-modular-ai-layer)

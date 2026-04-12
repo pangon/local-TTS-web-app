@@ -136,6 +136,14 @@ class TestSynthesizeSegment:
         with pytest.raises(SynthesisError, match="Failed to synthesize"):
             synthesize_segment("Test", adapter)
 
+    def test_forwards_kwargs_to_adapter(self):
+        adapter = MagicMock()
+        adapter.synthesize.return_value = np.zeros(100, dtype=np.float32)
+        synthesize_segment("Ciao", adapter, voice="if_sara", language="i")
+        adapter.synthesize.assert_called_once_with(
+            "Ciao", voice="if_sara", language="i",
+        )
+
 
 # ---------------------------------------------------------------------------
 # encode_to_mp3

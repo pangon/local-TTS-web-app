@@ -12,7 +12,7 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 from pydub import AudioSegment
@@ -58,12 +58,14 @@ def split_into_sentences(text: str) -> list[str]:
 def synthesize_segment(
     text: str,
     adapter: ModelAdapter,
+    **kwargs: Any,
 ) -> np.ndarray:
     """Synthesize a single text segment to a waveform numpy array.
 
     Args:
         text: Text to synthesize (typically one sentence).
         adapter: Loaded model adapter providing inference.
+        **kwargs: Passed through to the adapter (voice, language, etc.).
 
     Returns:
         1-D float32 numpy array of audio samples.
@@ -72,7 +74,7 @@ def synthesize_segment(
         SynthesisError: If inference fails.
     """
     try:
-        return adapter.synthesize(text)
+        return adapter.synthesize(text, **kwargs)
     except Exception as exc:
         raise SynthesisError(f"Failed to synthesize text segment: {exc}") from exc
 
@@ -112,6 +114,7 @@ def synthesize_chapter(
     adapter: ModelAdapter,
     output_path: Path,
     on_sentence_done: Callable[[int, int], None] | None = None,
+    **kwargs: Any,
 ) -> float:
     """Synthesize a chapter's text to an MP3 file.
 
@@ -125,6 +128,7 @@ def synthesize_chapter(
         on_sentence_done: Called after each sentence with ``(completed, total)``
             where *completed* is the 1-based count of sentences done so far
             and *total* is the number of sentences in the chapter.
+        **kwargs: Passed through to the adapter (voice, language, etc.).
 
     Returns:
         Duration of the resulting audio in seconds.
@@ -147,7 +151,7 @@ def synthesize_chapter(
     total_sentences = len(sentences)
     waveforms: list[np.ndarray] = []
     for i, sentence in enumerate(sentences):
-        waveform = synthesize_segment(sentence, adapter)
+        waveform = synthesize_segment(sentence, adapter, **kwargs)
         waveforms.append(waveform)
         waveforms.append(silence)
         if on_sentence_done:
@@ -166,6 +170,7 @@ def synthesize_chapters(
     adapter: ModelAdapter,
     output_dir: Path,
     progress_callback: Callable[[int], None] | None = None,
+    **kwargs: Any,
 ) -> list[SynthesisResult]:
     """Synthesize all chapters to MP3 files with progress reporting.
 
@@ -181,6 +186,7 @@ def synthesize_chapters(
         output_dir: Directory where MP3 files will be written.
         progress_callback: Called with overall percentage (0-100) as characters
             are processed.
+        **kwargs: Passed through to the adapter (voice, language, etc.).
 
     Returns:
         List of SynthesisResult, one per chapter.
@@ -233,6 +239,7 @@ def synthesize_chapters(
             adapter=adapter,
             output_path=output_path,
             on_sentence_done=sentence_cb,
+            **kwargs,
         )
 
         chars_done += ch_chars

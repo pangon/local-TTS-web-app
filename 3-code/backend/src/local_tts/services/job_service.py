@@ -286,6 +286,8 @@ class JobService:
                 text=work.text,
                 output_dir=output_dir,
                 progress_callback=progress_callback,
+                voice=work.voice,
+                language=work.language,
             )
 
             # Transition: processing -> completed

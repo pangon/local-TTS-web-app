@@ -195,7 +195,7 @@ class TestProgressReporting:
     def test_progress_callback_updates_database(self, service: JobService, mock_tts_engine: MagicMock, db_conn):
         progress_values: list[int] = []
 
-        def fake_synthesize(text, output_dir, progress_callback=None):
+        def fake_synthesize(text, output_dir, progress_callback=None, **kwargs):
             if progress_callback:
                 progress_callback(33)
                 progress_callback(66)
@@ -267,7 +267,7 @@ class TestSequentialProcessing:
         processing_order: list[str] = []
         gate = threading.Event()
 
-        def ordered_synthesize(text, output_dir, progress_callback=None):
+        def ordered_synthesize(text, output_dir, progress_callback=None, **kwargs):
             processing_order.append(text)
             if text == "first":
                 gate.wait(timeout=5)
