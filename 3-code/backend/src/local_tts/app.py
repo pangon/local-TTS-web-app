@@ -15,6 +15,7 @@ from local_tts.api.router import api_router
 from local_tts.api.sse import EventBus
 from local_tts.db import init_db
 from local_tts.services.job_service import JobService, SynthesisJobResult
+from local_tts.services.library_service import LibraryService
 from local_tts.services.model_service import ModelService
 from local_tts.spa import SPAStaticFiles
 from local_tts.tts.engine import TTSEngine
@@ -37,16 +38,19 @@ def _publish_from_thread(
     )
 
 
-def _wire_job_sse(
+def _wire_job_callbacks(
     job_service: JobService,
+    library_service: LibraryService,
     event_bus: EventBus,
     loop: asyncio.AbstractEventLoop,
 ) -> None:
-    """Connect JobService callbacks to the SSE EventBus.
+    """Connect JobService callbacks to LibraryService and SSE EventBus.
 
-    Called during lifespan after both JobService and EventBus are ready.
-    Callbacks are invoked from the job worker thread, so they use
-    ``asyncio.run_coroutine_threadsafe`` to publish events.
+    Called during lifespan after all services are ready.  Callbacks are
+    invoked from the job worker thread.  The completion handler persists
+    audiobook records first (TASK-library-service-create), then publishes
+    the SSE event so the frontend receives the audiobook_id only after
+    it is committed to the database.
     """
 
     def on_progress(job_id: str, job_type: str, progress: int) -> None:
@@ -58,6 +62,7 @@ def _wire_job_sse(
         })
 
     def on_completed(result: SynthesisJobResult) -> None:
+        library_service.create_audiobook_from_job(result)
         _publish_from_thread(event_bus, loop, "job-completed", {
             "job_id": result.job_id,
             "type": "synthesis",
@@ -117,8 +122,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     job_service = JobService(tts_engine, conn, config.DATA_DIR)
     app.state.job_service = job_service
 
-    # Step 5: Wire job callbacks to SSE EventBus (TASK-job-progress-sse)
-    _wire_job_sse(job_service, app.state.event_bus, asyncio.get_running_loop())
+    # Step 5: Initialize Library Service (TASK-library-service-create)
+    library_service = LibraryService(config.DATA_DIR)
+    app.state.library_service = library_service
+
+    # Step 6: Wire job callbacks to Library Service and SSE EventBus
+    _wire_job_callbacks(
+        job_service, library_service, app.state.event_bus,
+        asyncio.get_running_loop(),
+    )
 
     yield
 

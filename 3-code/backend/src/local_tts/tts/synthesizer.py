@@ -37,6 +37,7 @@ class SynthesisResult:
     """Result of synthesizing one chapter to an MP3 file."""
 
     chapter_number: int
+    title: str
     audio_filename: str
     duration_seconds: float
 
@@ -199,6 +200,7 @@ def synthesize_chapters(
         results.append(
             SynthesisResult(
                 chapter_number=chapter.number,
+                title=chapter.title,
                 audio_filename=filename,
                 duration_seconds=duration,
             )

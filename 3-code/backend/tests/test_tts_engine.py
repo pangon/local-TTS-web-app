@@ -172,7 +172,7 @@ class TestSynthesize:
 
         chapters = [Chapter(number=1, title="Ch 1", text="Hello.")]
         mock_parse.return_value = chapters
-        results = [SynthesisResult(1, "chapter-01.mp3", 5.0)]
+        results = [SynthesisResult(1, "Ch 1", "chapter-01.mp3", 5.0)]
         mock_synth.return_value = results
 
         mock_adapter = MagicMock()
@@ -204,7 +204,7 @@ class TestSynthesizeChapters:
         engine._model_loader.adapter = mock_adapter
 
         chapters = [Chapter(number=1, title="Ch 1", text="Hi.")]
-        mock_synth.return_value = [SynthesisResult(1, "chapter-01.mp3", 2.0)]
+        mock_synth.return_value = [SynthesisResult(1, "Ch 1", "chapter-01.mp3", 2.0)]
 
         engine.synthesize_chapters(chapters, tmp_path)
         mock_synth.assert_called_once()

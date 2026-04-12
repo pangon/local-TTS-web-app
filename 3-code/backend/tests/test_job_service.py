@@ -49,7 +49,7 @@ def mock_tts_engine() -> MagicMock:
     engine = MagicMock()
     engine.loaded_model_id = "hexgrad/Kokoro-82M"
     engine.synthesize.return_value = [
-        SynthesisResult(chapter_number=1, audio_filename="chapter-01.mp3", duration_seconds=60.0),
+        SynthesisResult(chapter_number=1, title="Chapter 1", audio_filename="chapter-01.mp3", duration_seconds=60.0),
     ]
     return engine
 
@@ -200,7 +200,7 @@ class TestProgressReporting:
                 progress_callback(33)
                 progress_callback(66)
                 progress_callback(100)
-            return [SynthesisResult(1, "chapter-01.mp3", 30.0)]
+            return [SynthesisResult(1, "Chapter 1", "chapter-01.mp3", 30.0)]
 
         mock_tts_engine.synthesize.side_effect = fake_synthesize
 
@@ -270,7 +270,7 @@ class TestSequentialProcessing:
             processing_order.append(text)
             if text == "first":
                 gate.wait(timeout=5)
-            return [SynthesisResult(1, "chapter-01.mp3", 10.0)]
+            return [SynthesisResult(1, "Chapter 1", "chapter-01.mp3", 10.0)]
 
         mock_tts_engine.synthesize.side_effect = ordered_synthesize
 

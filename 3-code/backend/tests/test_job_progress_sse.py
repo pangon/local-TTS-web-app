@@ -1,7 +1,7 @@
 """Tests for job progress SSE wiring (TASK-job-progress-sse).
 
 Covers:
-- _wire_job_sse connects all three JobService callbacks
+- _wire_job_callbacks connects all three JobService callbacks
 - on_progress publishes job-progress event with correct payload
 - on_completed publishes job-completed event with correct payload
 - on_failed publishes job-failed event with correct payload
@@ -24,7 +24,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from local_tts.api.sse import EventBus
-from local_tts.app import _publish_from_thread, _wire_job_sse
+from local_tts.app import _publish_from_thread, _wire_job_callbacks
 from local_tts.db import init_db
 from local_tts.services.job_service import JobService, SynthesisJobResult
 from local_tts.tts.synthesizer import SynthesisResult
@@ -57,7 +57,7 @@ def mock_tts_engine() -> MagicMock:
     engine = MagicMock()
     engine.loaded_model_id = "hexgrad/Kokoro-82M"
     engine.synthesize.return_value = [
-        SynthesisResult(chapter_number=1, audio_filename="chapter-01.mp3", duration_seconds=60.0),
+        SynthesisResult(chapter_number=1, title="Chapter 1", audio_filename="chapter-01.mp3", duration_seconds=60.0),
     ]
     return engine
 
@@ -67,6 +67,11 @@ def job_service(mock_tts_engine: MagicMock, db_conn, tmp_data_dir: Path):
     svc = JobService(mock_tts_engine, db_conn, tmp_data_dir)
     yield svc
     svc.shutdown()
+
+
+@pytest.fixture()
+def mock_library_service() -> MagicMock:
+    return MagicMock()
 
 
 # ---------------------------------------------------------------------------
@@ -158,16 +163,16 @@ class TestPublishFromThread:
 # ---------------------------------------------------------------------------
 
 
-class TestWireJobSSE:
+class TestWireJobCallbacks:
     @pytest.mark.anyio
     async def test_wires_all_three_callbacks(
-        self, job_service: JobService, event_bus: EventBus,
+        self, job_service: JobService, mock_library_service: MagicMock, event_bus: EventBus,
     ):
         assert job_service.on_progress is None
         assert job_service.on_completed is None
         assert job_service.on_failed is None
 
-        _wire_job_sse(job_service, event_bus, asyncio.get_running_loop())
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
 
         assert job_service.on_progress is not None
         assert job_service.on_completed is not None
@@ -175,10 +180,10 @@ class TestWireJobSSE:
 
     @pytest.mark.anyio
     async def test_on_progress_publishes_job_progress_event(
-        self, job_service: JobService, event_bus: EventBus,
+        self, job_service: JobService, mock_library_service: MagicMock, event_bus: EventBus,
     ):
         queue = await event_bus.subscribe()
-        _wire_job_sse(job_service, event_bus, asyncio.get_running_loop())
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
 
         job_service.on_progress("job-123", "synthesis", 42)
         await asyncio.sleep(0.1)
@@ -194,10 +199,10 @@ class TestWireJobSSE:
 
     @pytest.mark.anyio
     async def test_on_completed_publishes_job_completed_event(
-        self, job_service: JobService, event_bus: EventBus,
+        self, job_service: JobService, mock_library_service: MagicMock, event_bus: EventBus,
     ):
         queue = await event_bus.subscribe()
-        _wire_job_sse(job_service, event_bus, asyncio.get_running_loop())
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
 
         result = SynthesisJobResult(
             job_id="job-456",
@@ -207,7 +212,7 @@ class TestWireJobSSE:
             voice="af_heart",
             language="en",
             chapter_results=[
-                SynthesisResult(chapter_number=1, audio_filename="ch01.mp3", duration_seconds=60.0),
+                SynthesisResult(chapter_number=1, title="Chapter 1", audio_filename="ch01.mp3", duration_seconds=60.0),
             ],
         )
         job_service.on_completed(result)
@@ -222,11 +227,30 @@ class TestWireJobSSE:
         }
 
     @pytest.mark.anyio
+    async def test_on_completed_calls_library_service(
+        self, job_service: JobService, mock_library_service: MagicMock, event_bus: EventBus,
+    ):
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
+
+        result = SynthesisJobResult(
+            job_id="job-456",
+            audiobook_id="book-789",
+            source_filename="my-book.txt",
+            model_id="hexgrad/Kokoro-82M",
+            voice=None,
+            language=None,
+            chapter_results=[],
+        )
+        job_service.on_completed(result)
+
+        mock_library_service.create_audiobook_from_job.assert_called_once_with(result)
+
+    @pytest.mark.anyio
     async def test_on_failed_publishes_job_failed_event(
-        self, job_service: JobService, event_bus: EventBus,
+        self, job_service: JobService, mock_library_service: MagicMock, event_bus: EventBus,
     ):
         queue = await event_bus.subscribe()
-        _wire_job_sse(job_service, event_bus, asyncio.get_running_loop())
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
 
         job_service.on_failed("job-err", "synthesis", "Out of VRAM")
         await asyncio.sleep(0.1)
@@ -251,6 +275,7 @@ class TestJobProgressSSEIntegration:
         self,
         job_service: JobService,
         mock_tts_engine: MagicMock,
+        mock_library_service: MagicMock,
         event_bus: EventBus,
     ):
         """A successful synthesis job publishes job-progress and job-completed events."""
@@ -260,12 +285,12 @@ class TestJobProgressSSEIntegration:
                 progress_callback(33)
                 progress_callback(66)
                 progress_callback(100)
-            return [SynthesisResult(1, "chapter-01.mp3", 30.0)]
+            return [SynthesisResult(1, "Chapter 1", "chapter-01.mp3", 30.0)]
 
         mock_tts_engine.synthesize.side_effect = fake_synthesize
 
         queue = await event_bus.subscribe()
-        _wire_job_sse(job_service, event_bus, asyncio.get_running_loop())
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
 
         job = job_service.create_synthesis_job("book.txt", "Hello world")
 
@@ -297,13 +322,14 @@ class TestJobProgressSSEIntegration:
         self,
         job_service: JobService,
         mock_tts_engine: MagicMock,
+        mock_library_service: MagicMock,
         event_bus: EventBus,
     ):
         """A failed synthesis job publishes a job-failed event with error message."""
         mock_tts_engine.synthesize.side_effect = RuntimeError("GPU out of memory")
 
         queue = await event_bus.subscribe()
-        _wire_job_sse(job_service, event_bus, asyncio.get_running_loop())
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
 
         job = job_service.create_synthesis_job("book.txt", "Hello")
 
@@ -323,13 +349,14 @@ class TestJobProgressSSEIntegration:
         self,
         job_service: JobService,
         mock_tts_engine: MagicMock,
+        mock_library_service: MagicMock,
         event_bus: EventBus,
     ):
         """When no model is loaded, job fails and publishes job-failed event."""
         mock_tts_engine.loaded_model_id = None
 
         queue = await event_bus.subscribe()
-        _wire_job_sse(job_service, event_bus, asyncio.get_running_loop())
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
 
         job = job_service.create_synthesis_job("book.txt", "Hello")
 
@@ -351,11 +378,11 @@ class TestJobProgressSSEIntegration:
 class TestEventPayloadConformance:
     @pytest.mark.anyio
     async def test_job_progress_payload_matches_api_design(
-        self, job_service: JobService, event_bus: EventBus,
+        self, job_service: JobService, mock_library_service: MagicMock, event_bus: EventBus,
     ):
         """job-progress event has all fields from api-design.md."""
         queue = await event_bus.subscribe()
-        _wire_job_sse(job_service, event_bus, asyncio.get_running_loop())
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
 
         job_service.on_progress("j1", "synthesis", 42)
         await asyncio.sleep(0.1)
@@ -365,11 +392,11 @@ class TestEventPayloadConformance:
 
     @pytest.mark.anyio
     async def test_job_completed_payload_matches_api_design(
-        self, job_service: JobService, event_bus: EventBus,
+        self, job_service: JobService, mock_library_service: MagicMock, event_bus: EventBus,
     ):
         """job-completed event has all fields from api-design.md."""
         queue = await event_bus.subscribe()
-        _wire_job_sse(job_service, event_bus, asyncio.get_running_loop())
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
 
         result = SynthesisJobResult(
             job_id="j1", audiobook_id="b1", source_filename="f.txt",
@@ -383,11 +410,11 @@ class TestEventPayloadConformance:
 
     @pytest.mark.anyio
     async def test_job_failed_payload_matches_api_design(
-        self, job_service: JobService, event_bus: EventBus,
+        self, job_service: JobService, mock_library_service: MagicMock, event_bus: EventBus,
     ):
         """job-failed event has all fields from api-design.md."""
         queue = await event_bus.subscribe()
-        _wire_job_sse(job_service, event_bus, asyncio.get_running_loop())
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
 
         job_service.on_failed("j1", "synthesis", "Error")
         await asyncio.sleep(0.1)
