@@ -111,6 +111,7 @@ def synthesize_chapter(
     text: str,
     adapter: ModelAdapter,
     output_path: Path,
+    on_sentence_done: Callable[[int, int], None] | None = None,
 ) -> float:
     """Synthesize a chapter's text to an MP3 file.
 
@@ -121,6 +122,9 @@ def synthesize_chapter(
         text: Full chapter text.
         adapter: Loaded model adapter providing inference and sample rate.
         output_path: Path where the MP3 file will be written.
+        on_sentence_done: Called after each sentence with ``(completed, total)``
+            where *completed* is the 1-based count of sentences done so far
+            and *total* is the number of sentences in the chapter.
 
     Returns:
         Duration of the resulting audio in seconds.
@@ -140,11 +144,14 @@ def synthesize_chapter(
         int(sample_rate * _INTER_SENTENCE_SILENCE_S), dtype=np.float32
     )
 
+    total_sentences = len(sentences)
     waveforms: list[np.ndarray] = []
-    for sentence in sentences:
+    for i, sentence in enumerate(sentences):
         waveform = synthesize_segment(sentence, adapter)
         waveforms.append(waveform)
         waveforms.append(silence)
+        if on_sentence_done:
+            on_sentence_done(i + 1, total_sentences)
 
     # Remove trailing silence
     if waveforms:
@@ -165,12 +172,15 @@ def synthesize_chapters(
     Each chapter is written to ``output_dir/chapter-NN.mp3`` where NN is the
     zero-padded chapter number.
 
+    Progress is reported as percentage of total characters processed, updated
+    after each sentence is synthesized for fine-grained feedback.
+
     Args:
         chapters: Chapters to synthesize (from chapter_parser.parse_chapters).
         adapter: Loaded model adapter providing inference and sample rate.
         output_dir: Directory where MP3 files will be written.
-        progress_callback: Called with overall percentage (0-100) after each
-            chapter completes.
+        progress_callback: Called with overall percentage (0-100) as characters
+            are processed.
 
     Returns:
         List of SynthesisResult, one per chapter.
@@ -182,10 +192,37 @@ def synthesize_chapters(
 
     results: list[SynthesisResult] = []
     total = len(chapters)
+    total_chars = sum(len(ch.text) for ch in chapters)
+    chars_done = 0
+    last_reported = -1
 
     for i, chapter in enumerate(chapters):
         filename = f"chapter-{chapter.number:02d}.mp3"
         output_path = output_dir / filename
+        ch_chars = len(chapter.text)
+
+        # Build per-chapter sentence callback that maps sentence progress
+        # to overall character-based percentage.
+        sentence_cb: Callable[[int, int], None] | None = None
+        if progress_callback and total_chars > 0:
+
+            def _on_sentence_done(
+                done: int,
+                sentence_total: int,
+                *,
+                _ch_chars: int = ch_chars,
+            ) -> None:
+                nonlocal last_reported
+                pct = int(
+                    ((chars_done + _ch_chars * done / sentence_total)
+                     / total_chars)
+                    * 100
+                )
+                if pct != last_reported:
+                    last_reported = pct
+                    progress_callback(pct)
+
+            sentence_cb = _on_sentence_done
 
         logger.info(
             "Synthesizing chapter %d/%d: %s", i + 1, total, chapter.title
@@ -195,7 +232,10 @@ def synthesize_chapters(
             text=chapter.text,
             adapter=adapter,
             output_path=output_path,
+            on_sentence_done=sentence_cb,
         )
+
+        chars_done += ch_chars
 
         results.append(
             SynthesisResult(
@@ -205,10 +245,6 @@ def synthesize_chapters(
                 duration_seconds=duration,
             )
         )
-
-        if progress_callback:
-            progress = int(((i + 1) / total) * 100)
-            progress_callback(progress)
 
         logger.info(
             "Chapter %d/%d complete (%.1fs audio)", i + 1, total, duration

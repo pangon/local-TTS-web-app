@@ -214,6 +214,30 @@ class TestSynthesizeChapter:
         assert adapter.call_count == 3
         assert duration > 0
 
+    def test_on_sentence_done_callback(self, tmp_path: Path):
+        adapter = _FakeAdapter()
+        output = tmp_path / "cb.mp3"
+        calls: list[tuple[int, int]] = []
+        synthesize_chapter(
+            "First. Second. Third.",
+            adapter,
+            output,
+            on_sentence_done=lambda done, total: calls.append((done, total)),
+        )
+        assert calls == [(1, 3), (2, 3), (3, 3)]
+
+    def test_on_sentence_done_not_called_for_empty_text(self, tmp_path: Path):
+        adapter = _FakeAdapter()
+        output = tmp_path / "empty_cb.mp3"
+        calls: list[tuple[int, int]] = []
+        synthesize_chapter(
+            "",
+            adapter,
+            output,
+            on_sentence_done=lambda done, total: calls.append((done, total)),
+        )
+        assert calls == []
+
 
 # ---------------------------------------------------------------------------
 # synthesize_chapters
@@ -272,6 +296,53 @@ class TestSynthesizeChapters:
             progress_callback=progress_values.append,
         )
         assert progress_values == [100]
+
+    def test_progress_character_based_multi_sentence(self, tmp_path: Path):
+        """Progress updates per sentence within a single chapter."""
+        adapter = _FakeAdapter()
+        # 3 sentences of roughly equal length → ~33%, ~66%, 100%
+        chapters = [Chapter(number=1, title="Ch1", text="AAAA. BBBB. CCCC.")]
+        progress_values: list[int] = []
+        synthesize_chapters(
+            chapters, adapter, tmp_path,
+            progress_callback=progress_values.append,
+        )
+        assert len(progress_values) == 3
+        assert progress_values[-1] == 100
+        # Each value should increase
+        assert progress_values == sorted(progress_values)
+
+    def test_progress_character_based_uneven_chapters(self, tmp_path: Path):
+        """Longer chapters get a bigger share of the progress bar."""
+        adapter = _FakeAdapter()
+        # Chapter 1: short (10 chars), Chapter 2: long (30 chars)
+        chapters = [
+            Chapter(number=1, title="Short", text="Short one."),
+            Chapter(number=2, title="Long", text="A much longer chapter text here for testing progress."),
+        ]
+        progress_values: list[int] = []
+        synthesize_chapters(
+            chapters, adapter, tmp_path,
+            progress_callback=progress_values.append,
+        )
+        # Short chapter (10 chars) should report a small percentage, not 50%
+        assert progress_values[0] < 30
+        assert progress_values[-1] == 100
+
+    def test_progress_deduplicates_same_percentage(self, tmp_path: Path):
+        """Duplicate percentage values are not reported twice."""
+        adapter = _FakeAdapter()
+        # 200 single-char sentences → many will map to the same percentage
+        text = ". ".join("X" for _ in range(200)) + "."
+        chapters = [Chapter(number=1, title="Ch1", text=text)]
+        progress_values: list[int] = []
+        synthesize_chapters(
+            chapters, adapter, tmp_path,
+            progress_callback=progress_values.append,
+        )
+        # No duplicates
+        assert len(progress_values) == len(set(progress_values))
+        assert progress_values[-1] == 100
 
     def test_no_callback_no_error(self, tmp_path: Path):
         adapter = _FakeAdapter()
