@@ -2,12 +2,14 @@
 
 from fastapi import APIRouter
 
+from local_tts.api.jobs import router as jobs_router
 from local_tts.api.models import router as models_router
 from local_tts.api.sse import router as sse_router
 
 api_router = APIRouter()
 api_router.include_router(sse_router)
 api_router.include_router(models_router)
+api_router.include_router(jobs_router)
 
 
 @api_router.get("/health")
