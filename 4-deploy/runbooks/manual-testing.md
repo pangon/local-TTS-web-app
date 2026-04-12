@@ -4,7 +4,7 @@
 
 Step-by-step instructions to build, run, and manually test the Local TTS Web App. This runbook is updated incrementally as new phases are completed.
 
-**Current coverage:** Phases 1-3 (Project Scaffolding, TTS Engine Foundation, Model Management End-to-End)
+**Current coverage:** Phases 1-4 (Project Scaffolding, TTS Engine Foundation, Model Management End-to-End, Audiobook Synthesis End-to-End)
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ cd 3-code/backend
 pytest
 ```
 
-Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, and app scaffold.
+Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (file upload, validation, disk space check), library service (audiobook/chapter persistence), and SSE event wiring for job progress/completed/failed.
 
 ### Frontend Tests
 
@@ -54,7 +54,7 @@ nvm use
 npm run test:unit
 ```
 
-Expected outcome: all tests pass. Tests cover Vue app rendering, router configuration, Vite proxy config, SSE client composable, model API service, and ModelsView component.
+Expected outcome: all tests pass. Tests cover Vue app rendering, router configuration, Vite proxy config, SSE client composable, model API service, ModelsView component, jobs API service (synthesis job creation, error handling), and CreateView component (file validation, progress display, SSE event handling, form reset).
 
 ### Frontend Type Check
 
@@ -208,6 +208,104 @@ Expected outcome: model downloads with real-time progress feedback.
 
 Expected outcome: model loads onto GPU with VRAM validation.
 
+### Phase 4: Audiobook Synthesis End-to-End
+
+**Prerequisite:** A TTS model must be downloaded and loaded before testing synthesis. Complete Phase 3 tests (model download and load) first.
+
+#### 4.1 Navigate to Create view
+
+1. Open the app and click "Create" in the navigation bar.
+2. Verify the URL is `/create` and the page shows "Create Audiobook" heading.
+3. Verify a file input is displayed with the label "Select a .txt file (UTF-8, max 2 MB)".
+4. Verify the "Start Synthesis" button is present but disabled (no file selected yet).
+
+Expected outcome: Create view loads with file input and disabled submit button.
+
+#### 4.2 File upload validation
+
+1. On the Create page, try selecting a non-.txt file (e.g., a `.pdf` or `.jpg`).
+2. Verify an error message appears: "Only .txt files are accepted".
+3. Verify the "Start Synthesis" button remains disabled.
+4. Select a `.txt` file larger than 2 MB.
+5. Verify an error message appears indicating the file exceeds the 2 MB size limit, showing the actual file size.
+6. Select a valid `.txt` file under 2 MB.
+7. Verify the file name and size (in KB) are displayed below the input.
+8. Verify the "Start Synthesis" button becomes enabled.
+
+Expected outcome: invalid files are rejected with clear error messages; valid files enable the submit button.
+
+#### 4.3 Synthesis without a loaded model
+
+1. Ensure no model is loaded (restart the backend without loading a model, or unload the current model).
+2. Select a valid `.txt` file and click "Start Synthesis".
+3. Verify an error message appears indicating no model is loaded (`"No model loaded"`).
+4. Verify the file input remains enabled so the user can retry.
+
+Expected outcome: synthesis is rejected with a clear error when no model is loaded.
+
+#### 4.4 Submit synthesis job with progress
+
+1. Ensure a TTS model is downloaded and loaded (Phase 3 prerequisite).
+2. Select a valid `.txt` file and click "Start Synthesis".
+3. Verify the button text changes to "Submitting..." briefly.
+4. Verify a progress section appears below the form with:
+   - Status label showing "queued" (gray) initially.
+   - A progress bar starting at 0%.
+5. Verify the file input becomes disabled while the job is active.
+6. Verify the status transitions to "processing" (blue) and the progress bar updates in real time via SSE.
+7. Open browser DevTools Network tab, filter by EventSource — verify `job-progress` SSE events are received with incrementing progress values.
+
+Expected outcome: synthesis job is created, progress updates arrive via SSE, and the UI reflects real-time status.
+
+#### 4.5 Synthesis completes successfully
+
+1. Wait for the synthesis job started in test 4.4 to complete.
+2. Verify the status changes to "completed" (green).
+3. Verify a success message appears: "Audiobook created successfully!".
+4. Verify the progress bar is replaced by the success message.
+5. Verify a "New Audiobook" button appears.
+6. Open browser DevTools — verify a `job-completed` SSE event was received containing an `audiobook_id`.
+
+Expected outcome: job completes, audiobook is persisted, and the UI shows success state.
+
+#### 4.6 Audiobook persisted in database
+
+1. After a successful synthesis (test 4.5), open the SQLite database.
+2. Verify a new row exists in the `audiobook` table with the correct title (derived from the source filename, e.g., `"my-book.txt"` becomes `"my book"`).
+3. Verify chapter rows exist in the `chapter` table linked to the audiobook by `audiobook_id`, with sequential `chapter_number` values.
+4. Verify the `job` table has a row with `status = 'completed'` and `audiobook_id` set to the new audiobook's ID.
+5. Verify audio files exist on disk under `data/audiobooks/<audiobook_id>/`.
+
+Expected outcome: audiobook, chapter records, and audio files are correctly persisted.
+
+#### 4.7 Reset form for new audiobook
+
+1. After a completed or failed job, click the "New Audiobook" button.
+2. Verify the form resets: file input is cleared, progress section disappears, and the "Start Synthesis" button is disabled again.
+3. Select a new file — verify the form works as in test 4.2.
+
+Expected outcome: form resets cleanly for creating another audiobook.
+
+#### 4.8 Synthesis failure handling
+
+1. Trigger a synthesis failure (e.g., by providing a file that causes an error, or by simulating a GPU OOM condition).
+2. Verify the status changes to "failed" (red).
+3. Verify the error message from the backend is displayed.
+4. Verify a `job-failed` SSE event was received in DevTools.
+5. Verify the "New Audiobook" button appears for retry.
+6. Verify no audiobook record was created in the database for the failed job.
+
+Expected outcome: failures are reported clearly; no partial audiobook records remain.
+
+#### 4.9 Disk space preflight check
+
+1. Trigger a scenario where insufficient disk space is available (this may require testing with a nearly full disk or mocking the check).
+2. Select a valid `.txt` file and click "Start Synthesis".
+3. Verify a 409 error is returned with a message indicating insufficient disk space, showing estimated and available MB values.
+4. Verify the file input remains enabled so the user can retry.
+
+Expected outcome: disk space is checked before synthesis begins; clear error shown if insufficient.
+
 ## Rollback
 
 Not applicable — manual testing does not modify production state. If the application is left running, stop it with `Ctrl+C`.
@@ -224,3 +322,8 @@ Not applicable — manual testing does not modify production state. If the appli
 | Frontend shows blank page in production mode | Ensure `npm run build` was run and `dist/` directory exists |
 | API calls return 404 in dev mode | Ensure the backend is running on port 8000 before starting the Vite dev server |
 | Database not created | Check write permissions in the data directory; check `LOCAL_TTS_DATA_DIR` env var |
+| "No model loaded" when submitting synthesis | Load a model first on the Models page (Phase 3) |
+| Synthesis job stays "queued" indefinitely | Check backend logs for worker thread errors; ensure the job service started correctly |
+| Progress bar not updating | Verify SSE connection is active in DevTools Network tab; check for `job-progress` events |
+| "Insufficient disk space" error | Free up disk space or use a smaller text file; the estimate is ~0.002 MB per character |
+| Audiobook title has underscores/hyphens | Expected: title is derived from filename with `-` and `_` replaced by spaces |
