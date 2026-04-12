@@ -34,9 +34,9 @@ vi.mock('@/api/models', () => ({
 
 function sampleModels(): Model[] {
   return [
-    { model_id: 'facebook/mms-tts-eng', name: 'MMS TTS English', is_cached: false, is_loaded: false },
-    { model_id: 'facebook/mms-tts-ita', name: 'MMS TTS Italian', is_cached: true, is_loaded: false },
-    { model_id: 'facebook/mms-tts-fra', name: 'MMS TTS French', is_cached: true, is_loaded: true },
+    { model_id: 'facebook/mms-tts-eng', name: 'MMS TTS English', is_cached: false, is_loaded: false, loader_available: true },
+    { model_id: 'facebook/mms-tts-ita', name: 'MMS TTS Italian', is_cached: true, is_loaded: false, loader_available: true },
+    { model_id: 'facebook/mms-tts-fra', name: 'MMS TTS French', is_cached: true, is_loaded: true, loader_available: true },
   ]
 }
 
