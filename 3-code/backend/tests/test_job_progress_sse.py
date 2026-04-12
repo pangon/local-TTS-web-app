@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 import time
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -271,6 +272,54 @@ class TestWireJobCallbacks:
 
 class TestJobProgressSSEIntegration:
     @pytest.mark.anyio
+    async def test_processing_transition_emits_initial_progress_event(
+        self,
+        job_service: JobService,
+        mock_tts_engine: MagicMock,
+        mock_library_service: MagicMock,
+        event_bus: EventBus,
+    ):
+        """The queued->processing transition emits a job-progress event with progress=0.
+
+        Regression: without this initial event, the frontend (which relies
+        exclusively on SSE per DEC-sse-progress) stays stuck at "queued" / 0%
+        until the first chapter completes.
+        """
+
+        synthesize_started = threading.Event()
+        synthesize_proceed = threading.Event()
+
+        def slow_synthesize(text, output_dir, progress_callback=None):
+            synthesize_started.set()
+            synthesize_proceed.wait(timeout=5.0)
+            if progress_callback:
+                progress_callback(100)
+            return [SynthesisResult(1, "Ch1", "chapter-01.mp3", 10.0)]
+
+        mock_tts_engine.synthesize.side_effect = slow_synthesize
+
+        queue = await event_bus.subscribe()
+        _wire_job_callbacks(job_service, mock_library_service, event_bus, asyncio.get_running_loop())
+
+        job = job_service.create_synthesis_job("book.txt", "Hello world")
+
+        # Wait until synthesis has started (but not completed)
+        assert synthesize_started.wait(timeout=5.0)
+        await asyncio.sleep(0.2)
+
+        # Drain events received so far — should include the initial progress=0
+        events = await _drain_queue(queue, timeout=0.5)
+        progress_events = [(t, d) for t, d in events if t == "job-progress"]
+        assert len(progress_events) == 1
+        assert progress_events[0][1]["progress"] == 0
+        assert progress_events[0][1]["status"] == "processing"
+        assert progress_events[0][1]["job_id"] == job.id
+
+        # Let synthesis finish
+        synthesize_proceed.set()
+        _wait_for_job_status(job_service, job.id, "completed")
+
+    @pytest.mark.anyio
     async def test_successful_job_emits_progress_and_completed(
         self,
         job_service: JobService,
@@ -301,12 +350,12 @@ class TestJobProgressSSEIntegration:
 
         events = await _drain_queue(queue, timeout=1.0)
 
-        # Should have 3 progress events + 1 completed event
+        # Should have 4 progress events (initial 0% + 3 from synthesis) + 1 completed
         progress_events = [(t, d) for t, d in events if t == "job-progress"]
         completed_events = [(t, d) for t, d in events if t == "job-completed"]
 
-        assert len(progress_events) == 3
-        assert [d["progress"] for _, d in progress_events] == [33, 66, 100]
+        assert len(progress_events) == 4
+        assert [d["progress"] for _, d in progress_events] == [0, 33, 66, 100]
         for _, data in progress_events:
             assert data["job_id"] == job.id
             assert data["type"] == "synthesis"
@@ -338,6 +387,11 @@ class TestJobProgressSSEIntegration:
 
         events = await _drain_queue(queue, timeout=1.0)
 
+        # Initial progress=0 event fires before synthesis attempt
+        progress_events = [(t, d) for t, d in events if t == "job-progress"]
+        assert len(progress_events) == 1
+        assert progress_events[0][1]["progress"] == 0
+
         failed_events = [(t, d) for t, d in events if t == "job-failed"]
         assert len(failed_events) == 1
         assert failed_events[0][1]["job_id"] == job.id
@@ -364,6 +418,11 @@ class TestJobProgressSSEIntegration:
         await asyncio.sleep(0.3)
 
         events = await _drain_queue(queue, timeout=1.0)
+
+        # Initial progress=0 event fires before model check
+        progress_events = [(t, d) for t, d in events if t == "job-progress"]
+        assert len(progress_events) == 1
+        assert progress_events[0][1]["progress"] == 0
 
         failed_events = [(t, d) for t, d in events if t == "job-failed"]
         assert len(failed_events) == 1

@@ -210,7 +210,8 @@ class TestProgressReporting:
         job = service.create_synthesis_job("book.txt", "Hello")
         _wait_for_job_status(service, job.id, "completed")
 
-        assert callback.call_count == 3
+        assert callback.call_count == 4
+        callback.assert_any_call(job.id, "synthesis", 0)
         callback.assert_any_call(job.id, "synthesis", 33)
         callback.assert_any_call(job.id, "synthesis", 66)
         callback.assert_any_call(job.id, "synthesis", 100)

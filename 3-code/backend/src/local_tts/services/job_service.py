@@ -256,6 +256,9 @@ class JobService:
         )
         conn.commit()
 
+        if self.on_progress:
+            self.on_progress(job_id, "synthesis", 0)
+
         # Check that a model is loaded
         model_id = self._tts_engine.loaded_model_id
         if model_id is None:
