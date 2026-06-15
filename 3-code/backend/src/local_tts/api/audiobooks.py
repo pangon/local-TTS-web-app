@@ -30,6 +30,7 @@ class AudiobookSummaryResponse(BaseModel):
     language: str | None
     created_at: str
     chapter_count: int
+    total_duration_seconds: float | None
 
 
 class ChapterResponse(BaseModel):
@@ -68,6 +69,7 @@ async def list_audiobooks(request: Request) -> list[AudiobookSummaryResponse]:
             language=a.language,
             created_at=a.created_at,
             chapter_count=a.chapter_count,
+            total_duration_seconds=a.total_duration_seconds,
         )
         for a in service.list_audiobooks()
     ]

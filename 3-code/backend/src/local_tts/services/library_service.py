@@ -36,6 +36,7 @@ class AudiobookSummary:
     language: str | None
     created_at: str
     chapter_count: int
+    total_duration_seconds: float | None
 
 
 @dataclass(frozen=True)
@@ -160,7 +161,8 @@ class LibraryService:
             rows = conn.execute(
                 "SELECT a.id, a.title, a.source_filename, a.model_id, "
                 "a.voice, a.language, a.created_at, "
-                "COUNT(c.id) AS chapter_count "
+                "COUNT(c.id) AS chapter_count, "
+                "SUM(c.duration_seconds) AS total_duration_seconds "
                 "FROM audiobook a "
                 "LEFT JOIN chapter c ON c.audiobook_id = a.id "
                 "GROUP BY a.id "
@@ -179,6 +181,7 @@ class LibraryService:
                 language=row["language"],
                 created_at=row["created_at"],
                 chapter_count=row["chapter_count"],
+                total_duration_seconds=row["total_duration_seconds"],
             )
             for row in rows
         ]

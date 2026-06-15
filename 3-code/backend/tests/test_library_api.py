@@ -133,6 +133,8 @@ class TestListAudiobooks:
         assert entry["source_filename"] == "my-book.txt"
         assert entry["created_at"] == "2026-06-01T10:00:00Z"
         assert entry["chapter_count"] == 2
+        # Sum of the two default chapter durations (120.5 + 98.3).
+        assert entry["total_duration_seconds"] == pytest.approx(218.8)
 
     @pytest.mark.anyio
     async def test_audiobook_with_no_chapters_reports_zero_count(
@@ -147,6 +149,8 @@ class TestListAudiobooks:
 
         body = response.json()
         assert body[0]["chapter_count"] == 0
+        # No chapters → SUM(duration) is NULL, surfaced as null.
+        assert body[0]["total_duration_seconds"] is None
 
     @pytest.mark.anyio
     async def test_created_at_default_is_iso_8601_utc(

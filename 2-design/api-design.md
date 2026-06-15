@@ -47,10 +47,13 @@ Returns all audiobooks for the library view (`REQ-F-library-listing`).
     "voice": "default",
     "language": "it",
     "created_at": "2026-03-11T14:30:00Z",
-    "chapter_count": 5
+    "chapter_count": 5,
+    "total_duration_seconds": 1830.4
   }
 ]
 ```
+
+`total_duration_seconds` is the sum of the audiobook's chapter durations; it is `null` when the audiobook has no chapters with a recorded duration.
 
 ### Get Audiobook
 

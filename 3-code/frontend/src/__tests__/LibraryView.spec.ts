@@ -26,6 +26,7 @@ function makeBook(overrides: Partial<AudiobookSummary> = {}): AudiobookSummary {
     language: 'it',
     created_at: '2026-03-11T14:30:00Z',
     chapter_count: 5,
+    total_duration_seconds: 3723,
     ...overrides,
   }
 }
@@ -72,6 +73,30 @@ describe('LibraryView', () => {
     expect(wrapper.text()).toContain('1 chapter')
     // creation date is rendered (formatted)
     expect(items[0]!.find('.book-meta').text()).not.toBe('')
+  })
+
+  it('shows the total chapter duration, formatted', async () => {
+    mockFetchAudiobooks.mockResolvedValue([
+      makeBook({ id: 'ab-1', total_duration_seconds: 3723 }), // 1h 02m 03s
+      makeBook({ id: 'ab-2', total_duration_seconds: 125 }), // 2m 05s
+    ])
+    const wrapper = await mountView()
+
+    const items = wrapper.findAll('.audiobook-item')
+    expect(items[0]!.find('.book-meta').text()).toContain('1h 02m')
+    expect(items[1]!.find('.book-meta').text()).toContain('2m 05s')
+  })
+
+  it('omits the duration when it is unknown (no chapters)', async () => {
+    mockFetchAudiobooks.mockResolvedValue([
+      makeBook({ id: 'ab-1', chapter_count: 0, total_duration_seconds: null }),
+    ])
+    const wrapper = await mountView()
+
+    const meta = wrapper.find('.book-meta').text()
+    expect(meta).toContain('0 chapters')
+    // No stray separator / duration appended.
+    expect(meta).not.toMatch(/·\s*$/)
   })
 
   it('links each audiobook to its playback view', async () => {

@@ -9,6 +9,7 @@ export interface AudiobookSummary {
   language: string | null
   created_at: string
   chapter_count: number
+  total_duration_seconds: number | null
 }
 
 export interface Chapter {
