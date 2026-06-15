@@ -17,6 +17,7 @@ from local_tts.db import init_db
 from local_tts.services.job_service import JobService, SynthesisJobResult
 from local_tts.services.library_service import LibraryService
 from local_tts.services.model_service import ModelService
+from local_tts.services.playback_service import PlaybackService
 from local_tts.spa import SPAStaticFiles
 from local_tts.tts.engine import TTSEngine
 from local_tts.tts.ffmpeg_validator import FFmpegNotFoundError
@@ -125,6 +126,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Step 5: Initialize Library Service (TASK-library-service-create)
     library_service = LibraryService(config.DATA_DIR)
     app.state.library_service = library_service
+
+    # Step 5b: Initialize Playback Service (TASK-playback-position-api)
+    app.state.playback_service = PlaybackService(config.DATA_DIR)
 
     # Step 6: Wire job callbacks to Library Service and SSE EventBus
     _wire_job_callbacks(
