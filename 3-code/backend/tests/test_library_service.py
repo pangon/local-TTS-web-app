@@ -49,7 +49,8 @@ def _insert_job(db_conn, job_id: str) -> None:
     """Insert a minimal job record so the FK constraint is satisfied."""
     db_conn.execute(
         "INSERT INTO job (id, type, status, progress, created_at) "
-        "VALUES (?, 'synthesis', 'completed', 100, datetime('now'))",
+        "VALUES (?, 'synthesis', 'completed', 100, "
+        "strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))",
         (job_id,),
     )
     db_conn.commit()

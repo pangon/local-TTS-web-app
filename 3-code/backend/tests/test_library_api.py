@@ -16,6 +16,7 @@ real LibraryService, exercising the actual cascade and file-deletion behavior.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -63,7 +64,7 @@ def _seed_audiobook(
     model_id: str = "hexgrad/Kokoro-82M",
     voice: str | None = "if_sara",
     language: str | None = "it",
-    created_at: str = "2026-06-01 10:00:00",
+    created_at: str = "2026-06-01T10:00:00Z",
     chapters: list[tuple[int, str, float]] | None = None,
     with_audio_files: bool = True,
 ) -> None:
@@ -130,7 +131,7 @@ class TestListAudiobooks:
         assert entry["id"] == "book-001"
         assert entry["title"] == "My Book"
         assert entry["source_filename"] == "my-book.txt"
-        assert entry["created_at"] == "2026-06-01 10:00:00"
+        assert entry["created_at"] == "2026-06-01T10:00:00Z"
         assert entry["chapter_count"] == 2
 
     @pytest.mark.anyio
@@ -148,16 +149,39 @@ class TestListAudiobooks:
         assert body[0]["chapter_count"] == 0
 
     @pytest.mark.anyio
+    async def test_created_at_default_is_iso_8601_utc(
+        self, app: FastAPI, db_conn, tmp_data_dir: Path
+    ):
+        """created_at populated by the DB default is ISO 8601 with a trailing Z.
+
+        This is the path that previously diverged from the jobs API, which
+        already emits ISO-8601-Z timestamps (api-design Conventions).
+        """
+        db_conn.execute(
+            "INSERT INTO audiobook (id, title, source_filename, model_id) "
+            "VALUES ('book-001', 'Book', 'b.txt', 'hexgrad/Kokoro-82M')"
+        )
+        db_conn.commit()
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get("/api/v1/audiobooks")
+
+        created_at = response.json()[0]["created_at"]
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", created_at)
+
+    @pytest.mark.anyio
     async def test_audiobooks_ordered_newest_first(
         self, app: FastAPI, db_conn, tmp_data_dir: Path
     ):
         _seed_audiobook(
             db_conn, tmp_data_dir, audiobook_id="older",
-            created_at="2026-05-01 10:00:00",
+            created_at="2026-05-01T10:00:00Z",
         )
         _seed_audiobook(
             db_conn, tmp_data_dir, audiobook_id="newer",
-            created_at="2026-06-10 10:00:00",
+            created_at="2026-06-10T10:00:00Z",
         )
 
         async with AsyncClient(

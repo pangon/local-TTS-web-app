@@ -9,6 +9,7 @@ Covers:
 - Data directory creation
 """
 
+import re
 import sqlite3
 
 import pytest
@@ -102,6 +103,8 @@ class TestAudiobookTable:
         db.commit()
         row = db.execute("SELECT created_at FROM audiobook WHERE id='ab-2'").fetchone()
         assert row[0] is not None
+        # Default timestamps are ISO 8601 UTC with a trailing Z (api-design Conventions)
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", row[0])
 
 
 class TestChapterTable:

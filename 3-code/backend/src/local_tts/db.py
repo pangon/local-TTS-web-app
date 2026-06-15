@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS audiobook (
     model_id        TEXT NOT NULL,
     voice           TEXT,
     language        TEXT,
-    created_at      DATETIME NOT NULL DEFAULT (datetime('now'))
+    created_at      DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 CREATE TABLE IF NOT EXISTS chapter (
@@ -33,14 +33,14 @@ CREATE TABLE IF NOT EXISTS chapter (
 CREATE TABLE IF NOT EXISTS playback_position (
     audiobook_id        TEXT PRIMARY KEY REFERENCES audiobook(id) ON DELETE CASCADE,
     last_chapter_number INTEGER NOT NULL,
-    updated_at          DATETIME NOT NULL DEFAULT (datetime('now'))
+    updated_at          DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 CREATE TABLE IF NOT EXISTS chapter_playback_position (
     audiobook_id    TEXT NOT NULL REFERENCES audiobook(id) ON DELETE CASCADE,
     chapter_number  INTEGER NOT NULL,
     position_seconds REAL NOT NULL,
-    updated_at      DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at      DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     PRIMARY KEY (audiobook_id, chapter_number)
 );
 
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS job (
                     CHECK (status IN ('queued', 'processing', 'completed', 'failed')),
     progress        INTEGER NOT NULL DEFAULT 0,
     error_message   TEXT,
-    created_at      DATETIME NOT NULL DEFAULT (datetime('now')),
+    created_at      DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     started_at      DATETIME,
     completed_at    DATETIME
 );

@@ -8,7 +8,7 @@ RESTful JSON API served by FastAPI (`DEC-fastapi-backend`) on `127.0.0.1` (`REQ-
 
 - **Content types**: JSON for request/response bodies, `multipart/form-data` for file uploads, `audio/mpeg` for audio streaming, `application/zip` for archive downloads, `text/event-stream` for SSE.
 - **IDs**: UUIDs for audiobooks, chapters, and jobs. HuggingFace model IDs (e.g., `facebook/mms-tts-eng`) for models, passed as path parameters via `{model_id:path}`.
-- **Timestamps**: ISO 8601 format (e.g., `2026-03-11T14:30:00Z`).
+- **Timestamps**: ISO 8601 UTC with a trailing `Z` (e.g., `2026-03-11T14:30:00Z`). All timestamp fields in API responses use this format. The backend produces it consistently: SQLite column defaults use `strftime('%Y-%m-%dT%H:%M:%SZ', 'now')` and service-layer code uses an equivalent UTC helper, so timestamps coming from either path are interchangeable.
 - **Errors**: All error responses use `{"detail": "Human-readable message"}`. Structured fields are added where the UI needs specifics (e.g., disk space errors include `estimated_mb` and `available_mb`). FastAPI's validation errors (422) include field-level details automatically.
 - **Currently loaded model**: Synthesis and preview jobs use whichever model is currently loaded. The frontend orchestrates download → load → synthesize. If no model is loaded, job creation returns 409.
 
