@@ -8,6 +8,7 @@
 
 - HTTP REST with backend: sends API requests for all user actions (CRUD, job creation, model management)
 - SSE with backend: receives real-time progress and status events via `EventSource` API
+- Audio playback (`views/PlaybackView.vue`): uses the native `<audio>` element pointed at the chapter audio URL; chapter navigation is index-based over the sorted chapter list, and the two-level resume bookmark is read on load (seeking on `loadedmetadata`) and persisted best-effort on pause/end/chapter-change/unmount via the playback API service (`api/playback.ts`).
 
 ## Requirements Addressed
 

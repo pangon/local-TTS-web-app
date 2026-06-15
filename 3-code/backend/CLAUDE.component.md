@@ -9,6 +9,7 @@
 - HTTP REST + SSE with frontend: serves API endpoints and pushes real-time events
 - TTS subpackage (internal): application services import and call `TTSEngine` for GPU inference, model management, and chapter parsing (`DEC-tts-as-backend-module`)
 - Model adapter layer (internal): per-model loading and inference is delegated to concrete adapters implementing the `ModelAdapter` protocol (`src/local_tts/tts/adapters/`). New models are enabled by adding an adapter and registering it in `_ADAPTER_REGISTRY`; `ModelLoader.list_models()` exposes a `loader_available` flag (surfaced through `GET /models`) so the frontend can hide download/load actions for models without an adapter. See `architecture.md` § Model-Specific Loading Requirements.
+- Library & playback API (`src/local_tts/api/audiobooks.py`, `playback.py`): the `LibraryService` backs audiobook list/get/delete (delete cascades to chapter records and on-disk audio) and resolves chapter audio paths; chapter audio is streamed inline via `FileResponse` with HTTP Range support (206/`Content-Range`/416). Playback resume is a two-level bookmark (audiobook-level last chapter + per-chapter timestamp) served by the dedicated `PlaybackService` under `GET`/`PUT /audiobooks/{id}/position`.
 
 ## Requirements Addressed
 

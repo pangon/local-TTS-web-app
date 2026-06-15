@@ -105,7 +105,7 @@
 | TASK-phase-3-manual-testing | Create runbook and document build/run/test commands for model management capabilities | P1 | Done | - | TASK-model-management-view | 2026-03-15 | Covers phases 1-3 |
 | TASK-phase-3.1-manual-testing | Update runbook and component docs for model adapter and loader capabilities | P1 | Done | - | TASK-model-loader-status | 2026-06-15 | Covers Phase 3.1 |
 | TASK-phase-4-manual-testing | Update runbook and component docs for audiobook synthesis capabilities | P1 | Done | - | TASK-audiobook-creation-view | 2026-04-12 | |
-| TASK-phase-5-manual-testing | Update runbook and component docs for library and playback capabilities | P1 | Todo | - | TASK-playback-view | 2026-03-15 | |
+| TASK-phase-5-manual-testing | Update runbook and component docs for library and playback capabilities | P1 | Done | - | TASK-playback-view | 2026-06-15 | |
 | TASK-phase-6-manual-testing | Update runbook and component docs for voice selection and text preview capabilities | P2 | Todo | - | TASK-text-preview-view | 2026-03-15 | |
 | TASK-phase-7-manual-testing | Update runbook and component docs for monitoring, downloads, and cache management | P2 | Todo | - | TASK-model-cache-ui | 2026-03-15 | |
 | TASK-phase-8-manual-testing | Update runbook and component docs for deployment and setup documentation | P2 | Todo | - | TASK-setup-documentation | 2026-03-15 | |

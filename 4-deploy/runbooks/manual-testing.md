@@ -4,7 +4,7 @@
 
 Step-by-step instructions to build, run, and manually test the Local TTS Web App. This runbook is updated incrementally as new phases are completed.
 
-**Current coverage:** Phases 1-4 (Project Scaffolding, TTS Engine Foundation, Model Management End-to-End, Model Adapter Abstraction & Loaders [Phase 3.1], Audiobook Synthesis End-to-End)
+**Current coverage:** Phases 1-5 (Project Scaffolding, TTS Engine Foundation, Model Management End-to-End, Model Adapter Abstraction & Loaders [Phase 3.1], Audiobook Synthesis End-to-End, Library & Playback)
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ cd 3-code/backend
 pytest
 ```
 
-Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (file upload, validation, disk space check), library service (audiobook/chapter persistence), SSE event wiring for job progress/completed/failed, the model adapter registry/protocol (`has_adapter`/`get_adapter`, `loader_available` flag), and the Kokoro and Qwen3-TTS adapters.
+Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (file upload, validation, disk space check), library service (audiobook/chapter persistence and chapter audio path resolution), the library API (list/get/delete with cascade cleanup and chapter audio streaming with HTTP Range support), the playback position API (two-level GET/PUT bookmark, defaults, 404/422 handling), SSE event wiring for job progress/completed/failed, the model adapter registry/protocol (`has_adapter`/`get_adapter`, `loader_available` flag), and the Kokoro and Qwen3-TTS adapters.
 
 ### Frontend Tests
 
@@ -54,7 +54,7 @@ nvm use
 npm run test:unit
 ```
 
-Expected outcome: all tests pass. Tests cover Vue app rendering, router configuration, Vite proxy config, SSE client composable, model API service, ModelsView component, jobs API service (synthesis job creation, error handling), and CreateView component (file validation, progress display, SSE event handling, form reset).
+Expected outcome: all tests pass. Tests cover Vue app rendering, router configuration, Vite proxy config, SSE client composable, model API service, ModelsView component, jobs API service (synthesis job creation, error handling), CreateView component (file validation, progress display, SSE event handling, form reset), the audiobooks API service (list/get/delete, chapter audio URL helper), the playback API service (get/save position), LibraryView component (listing, empty state, inline delete confirmation, error handling), and PlaybackView component (chapter navigation, resume seek, bookmark persistence).
 
 ### Frontend Type Check
 
@@ -355,6 +355,84 @@ Expected outcome: failures are reported clearly; no partial audiobook records re
 
 Expected outcome: disk space is checked before synthesis begins; clear error shown if insufficient.
 
+### Phase 5: Library & Playback
+
+**Prerequisite:** At least one audiobook must exist. Complete a Phase 4 synthesis first (or use a database that already contains audiobooks). The Library is the app's home route (`/`).
+
+#### 5.1 Library lists audiobooks
+
+1. Open the app — it opens on the Library view (`/`), also reachable via the "Library" nav link.
+2. Verify each generated audiobook is listed with its title, creation date/time (localized), and chapter count (e.g. "3 chapters", or "1 chapter" for a single-chapter book).
+3. Cross-check against the API: `curl http://127.0.0.1:8000/api/audiobooks` returns a JSON array; each entry includes `id`, `title`, `source_filename`, `model_id`, `voice`, `language`, `created_at`, and `chapter_count`.
+
+Expected outcome: all audiobooks are listed with title, date, and chapter count (REQ-F-library-listing).
+
+#### 5.2 Empty library state
+
+1. Start with a fresh database (no audiobooks), or delete all audiobooks (test 5.7).
+2. Open the Library view.
+3. Verify the message "No audiobooks yet. Create one from the Create tab." is shown instead of a list.
+
+Expected outcome: a clear empty state is shown when no audiobooks exist.
+
+#### 5.3 Open an audiobook for playback
+
+1. On the Library view, click an audiobook row (the title/meta area is a link).
+2. Verify the URL becomes `/playback/<audiobook_id>` and the playback view shows the audiobook title and a "← Library" back link.
+3. Verify an `<audio>` player with native controls is displayed.
+4. Verify the current chapter's title is shown above the player ("now playing").
+
+Expected outcome: the playback view loads the selected audiobook with an audio player (REQ-F-audiobook-playback).
+
+#### 5.4 Chapter audio streams with Range support
+
+1. With the playback view open, press play on the audio control and verify intelligible speech plays.
+2. Seek within the track (drag the progress bar) and verify playback jumps without re-downloading from the start.
+3. Inspect the request: `curl -s -D - -o /dev/null -H "Range: bytes=0-1023" http://127.0.0.1:8000/api/audiobooks/<id>/chapters/1/audio`.
+4. Verify the response status is `206 Partial Content`, with `Content-Range`, `Accept-Ranges: bytes`, and `Content-Type: audio/mpeg` headers, and **no** `Content-Disposition: attachment` header (audio is served inline).
+5. Verify an out-of-range request (`Range: bytes=99999999-`) returns `416 Range Not Satisfiable`.
+
+Expected outcome: chapter audio is streamed inline and honours HTTP Range requests for seeking (REQ-F-audiobook-playback).
+
+#### 5.5 Chapter navigation (multi-chapter audiobook)
+
+1. Open an audiobook with more than one chapter.
+2. Verify a chapter navigation bar appears with "‹ Previous" / "Next ›" buttons and a "Chapter X of N" indicator, plus a clickable chapter list below the player.
+3. Verify "‹ Previous" is disabled on the first chapter and "Next ›" is disabled on the last.
+4. Click "Next ›" — verify the player loads the next chapter, the "now playing" title updates, and the active chapter in the list is highlighted.
+5. Click a chapter directly in the list — verify playback switches to that chapter.
+6. Open a single-chapter audiobook and verify the navigation bar and chapter list are **not** shown.
+
+Expected outcome: chapters can be navigated via buttons and the chapter list; navigation is hidden for single-chapter books.
+
+#### 5.6 Playback resume (two-level bookmark)
+
+1. Open a multi-chapter audiobook, play chapter 2 for a few seconds, then pause (or navigate to another chapter, or leave the view).
+2. Verify the position is saved: `curl http://127.0.0.1:8000/api/audiobooks/<id>/position` returns `last_chapter_number` equal to the chapter you were on and a `chapters` object mapping chapter numbers (as strings) to saved second offsets.
+3. Navigate away (back to Library) and reopen the same audiobook.
+4. Verify it reopens on the last active chapter, and once the audio metadata loads, the player seeks to the saved timestamp within that chapter.
+5. For a never-played audiobook, verify `GET …/position` returns `{"last_chapter_number": 1, "chapters": {}}` and the view starts at the first chapter at 0:00.
+
+Expected outcome: playback resumes from the last chapter and per-chapter timestamp; defaults are sensible for never-played books (REQ-F-playback-resume).
+
+#### 5.7 Delete audiobook with confirmation
+
+1. On the Library view, click "Delete" on an audiobook row.
+2. Verify an inline confirmation appears in that row: `Delete "<title>"?` with "Confirm" and "Cancel" buttons.
+3. Click "Cancel" — verify the row returns to its normal state and nothing is deleted.
+4. Click "Delete" again, then "Confirm" — verify the button shows "Deleting…" briefly and the row disappears from the list.
+5. Verify the records are gone: the audiobook no longer appears in `GET /api/audiobooks`, and `GET /api/audiobooks/<id>` returns `404`.
+6. Verify cascade cleanup: the chapter rows are removed and the audio files under `data/audiobooks/<id>/` are deleted from disk.
+
+Expected outcome: deletion requires confirmation and cascades to chapter records and audio files (REQ-F-delete-audiobook).
+
+#### 5.8 Delete error handling
+
+1. Trigger a delete on an audiobook that no longer exists (e.g. delete it via the API in another terminal first, then confirm the delete in a stale UI).
+2. Verify the backend returns `404` and the UI shows an error message ("Failed to delete audiobook") without crashing.
+
+Expected outcome: failed deletions surface a clear error and leave the UI usable.
+
 ## Rollback
 
 Not applicable — manual testing does not modify production state. If the application is left running, stop it with `Ctrl+C`.
@@ -379,3 +457,8 @@ Not applicable — manual testing does not modify production state. If the appli
 | Model shows "No adapter" badge with no Download/Load buttons | Expected: no adapter is registered yet for that model. Use an adapter-backed model (Kokoro-82M or Qwen3-TTS), or implement the corresponding `TASK-loader-*` adapter |
 | `loader_available` is `false` for a model you expect to work | Confirm the adapter is registered in `_ADAPTER_REGISTRY` (`src/local_tts/tts/adapters/__init__.py`); restart the backend after registering |
 | Kokoro produces garbled or English-only audio for non-English text | Ensure `espeak-ng` is installed and on PATH (`sudo apt-get install espeak-ng`) |
+| Library view is empty after a successful synthesis | Confirm the job completed (Phase 4 test 4.5) and `GET /api/audiobooks` returns the entry; check the data directory (`LOCAL_TTS_DATA_DIR`) matches between synthesis and the running backend |
+| Audio player shows controls but won't play / 404 on the audio URL | Verify the chapter audio file exists under `data/audiobooks/<id>/`; check `GET /api/audiobooks/<id>/chapters/<n>/audio` returns 200/206, not 404 |
+| Seeking restarts the track from the beginning | Confirm the audio endpoint returns `206` with `Accept-Ranges: bytes` (test 5.4); a proxy stripping Range headers can force full re-download |
+| Playback does not resume at the saved position | The bookmark is best-effort and saved on pause/end/chapter-change/unmount; ensure `PUT /api/audiobooks/<id>/position` succeeds and that the saved chapter still exists. The seek is applied on `loadedmetadata`, so a missing/short audio file will not seek |
+| Deleted audiobook still shows in the library | Refresh the Library view; if it persists, confirm `DELETE /api/audiobooks/<id>` returned 204 and check backend logs for file-cleanup errors |
