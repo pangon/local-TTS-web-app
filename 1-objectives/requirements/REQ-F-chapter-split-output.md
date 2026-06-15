@@ -19,3 +19,7 @@ When the source text contains chapter structure, the system shall produce one MP
 - Given an uploaded text with recognizable chapter markers, when synthesis completes, then the system produces one MP3 file per chapter
 - Given an uploaded text with no recognizable chapter markers, when synthesis completes, then the system produces a single MP3 file
 - Given chapter-split output, then each chapter file is labeled with its chapter number or title for identification
+
+## Related Requirements
+
+- [REQ-F-text-layout-repair](REQ-F-text-layout-repair.md) — text layout repair composes with chapter detection and must preserve chapter boundaries

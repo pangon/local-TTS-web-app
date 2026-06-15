@@ -94,6 +94,7 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 | [GOAL-validate-local-ai-execution](goals/GOAL-validate-local-ai-execution.md) | Should-have | Approved | Validate local AI model execution via web interface; ensure reusability |
 | [GOAL-huggingface-models](goals/GOAL-huggingface-models.md) | Must-have | Approved | Support open-weight HuggingFace models loaded on-demand |
 | [GOAL-quick-tts-preview](goals/GOAL-quick-tts-preview.md) | Should-have | Approved | Quick TTS from direct text input for voice/model previews |
+| [GOAL-text-normalization](goals/GOAL-text-normalization.md) | Must-have | Approved | Normalize/clean input text into TTS-ready form before synthesis |
 
 ---
 
@@ -113,6 +114,8 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 | [US-evaluate-local-ai](user-stories/US-evaluate-local-ai.md) | STK-developer | Should-have | Approved | Run TTS end-to-end locally and review performance data |
 | [US-manage-models](user-stories/US-manage-models.md) | STK-self-hoster | Should-have | Approved | View cached models and disk usage, delete unneeded models |
 | [US-synthesize-text-input](user-stories/US-synthesize-text-input.md) | STK-end-user | Should-have | Approved | Type or paste text and hear ephemeral TTS preview |
+| [US-clean-text-for-tts](user-stories/US-clean-text-for-tts.md) | STK-end-user | Must-have | Approved | Automatic text cleaning/normalization before synthesis |
+| [US-extensible-text-preprocessing](user-stories/US-extensible-text-preprocessing.md) | STK-developer | Should-have | Approved | Modular, language- and model-aware preprocessing pipeline |
 
 ---
 
@@ -148,6 +151,13 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 | [REQ-F-default-voice-quality](requirements/REQ-F-default-voice-quality.md) | Functional | Should-have | Approved | Pre-tested default voice in Italian; ≥ 95% intelligibility |
 | [REQ-PORT-browser-compat](requirements/REQ-PORT-browser-compat.md) | Portability | Should-have | Approved | Core workflows work on Chrome, Firefox, Edge desktop |
 | [REQ-SEC-localhost-binding](requirements/REQ-SEC-localhost-binding.md) | Security | Must-have | Approved | Web server binds to localhost by default; not network-accessible |
+| [REQ-F-text-numeric-symbolic-verbalization](requirements/REQ-F-text-numeric-symbolic-verbalization.md) | Functional | Must-have | Approved | Verbalize numbers, dates, percentages, currency, and symbols (language-aware) |
+| [REQ-F-text-unicode-sanitization](requirements/REQ-F-text-unicode-sanitization.md) | Functional | Must-have | Approved | Sanitize invisible/disallowed Unicode, spacing, dashes, quotes, emoji |
+| [REQ-F-text-layout-repair](requirements/REQ-F-text-layout-repair.md) | Functional | Must-have | Approved | Repair PDF line breaks/hyphenation, strip page numbers, reflow sentences |
+| [REQ-F-abbreviation-expansion](requirements/REQ-F-abbreviation-expansion.md) | Functional | Should-have | Approved | Verbalize abbreviations/acronyms; optional domain dictionary |
+| [REQ-MNT-preprocessing-pipeline](requirements/REQ-MNT-preprocessing-pipeline.md) | Maintainability | Should-have | Approved | Modular preprocessing pipeline configurable per language and per model |
+| [REQ-PERF-preprocessing-overhead](requirements/REQ-PERF-preprocessing-overhead.md) | Performance | Should-have | Approved | Bound preprocessing time (≤10 s for 2 MB; ≤1 s for preview); no regression of synthesis latency |
+| [REQ-USA-normalized-text-review](requirements/REQ-USA-normalized-text-review.md) | Usability | Should-have | Approved | Let user review normalized text and confirm before audio generation |
 
 ---
 
@@ -160,6 +170,7 @@ When an artifact (goal, user story, requirement) is no longer relevant:
 | [ASM-internet-for-model-download](assumptions/ASM-internet-for-model-download.md) | Environment | Verified | Low | Internet available for initial model download; synthesis is offline |
 | [ASM-text-file-format](assumptions/ASM-text-file-format.md) | User | Verified | Medium | Users upload UTF-8 .txt files up to ~2 MB |
 | [ASM-browser-mp3-playback](assumptions/ASM-browser-mp3-playback.md) | Technology | Verified | Low | Target browsers can natively play MP3 audio |
+| [ASM-input-text-quality-varies](assumptions/ASM-input-text-quality-varies.md) | User | Verified | Medium | Real-world inputs (esp. PDF→txt) contain artifacts needing cleaning |
 
 ---
 

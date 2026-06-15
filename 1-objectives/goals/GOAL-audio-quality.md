@@ -19,3 +19,4 @@
 
 - User stories: [US-select-voice](../user-stories/US-select-voice.md)
 - Requirements: [REQ-F-default-voice-quality](../requirements/REQ-F-default-voice-quality.md)
+- Supported by: [GOAL-text-normalization](GOAL-text-normalization.md) — clean, TTS-ready text is a precondition for natural-sounding output

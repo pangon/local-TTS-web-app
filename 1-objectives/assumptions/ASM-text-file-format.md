@@ -21,3 +21,4 @@ During implementation, test with UTF-8 files of varying sizes (small paragraph, 
 ## Related Artifacts
 
 - [GOAL-audiobook-creation](../goals/GOAL-audiobook-creation.md), [US-create-audiobook](../user-stories/US-create-audiobook.md)
+- [ASM-input-text-quality-varies](ASM-input-text-quality-varies.md) — addresses input *content* quality (artifacts needing cleaning), complementary to this assumption's *encoding/size* scope
