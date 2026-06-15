@@ -46,7 +46,17 @@ describe('savePlaybackPosition', () => {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chapter_number: 2, position_seconds: 42 }),
+      keepalive: false,
     })
+  })
+
+  it('sets keepalive when requested (saves during page unload)', async () => {
+    globalThis.fetch = mockFetchResponse(200, { chapter_number: 1, position_seconds: 9 })
+    await savePlaybackPosition('ab-1', 1, 9, { keepalive: true })
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/audiobooks/ab-1/position',
+      expect.objectContaining({ keepalive: true }),
+    )
   })
 
   it('throws on non-OK response', async () => {

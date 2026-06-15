@@ -144,7 +144,7 @@ Returns the two-level bookmark for an audiobook (`REQ-F-playback-resume`).
 
 `PUT /api/v1/audiobooks/{audiobook_id}/position`
 
-Saves both the audiobook-level bookmark and the per-chapter timestamp (`REQ-F-playback-resume`). Called by the frontend on pause, stop, or chapter change. Updates `PlaybackPosition.last_chapter_number` and `ChapterPlaybackPosition` for the given chapter.
+Saves both the audiobook-level bookmark and the per-chapter timestamp (`REQ-F-playback-resume`). Called by the frontend on pause, stop, or chapter change, periodically (every 20 seconds) during playback, and when leaving the player (in-app route change, page reload, or tab/browser close). Updates `PlaybackPosition.last_chapter_number` and `ChapterPlaybackPosition` for the given chapter. Unload-triggered saves use a `keepalive` request so they survive document teardown.
 
 **Request:**
 

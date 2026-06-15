@@ -32,7 +32,12 @@ export async function fetchPlaybackPosition(id: string): Promise<PlaybackPositio
  * chapter's timestamp.
  *
  * PUT /api/v1/audiobooks/{id}/position (REQ-F-playback-resume). Called on
- * pause, on chapter change, and when leaving the view.
+ * pause, on chapter change, periodically during playback, and when leaving
+ * the view (route change, reload, tab/browser close).
+ *
+ * Pass `keepalive: true` for saves triggered during page unload so the
+ * request is allowed to outlive the document (used by the navigation/close
+ * handlers, which cannot reliably await a normal fetch).
  *
  * @throws Error if the request fails.
  */
@@ -40,6 +45,7 @@ export async function savePlaybackPosition(
   id: string,
   chapterNumber: number,
   positionSeconds: number,
+  options: { keepalive?: boolean } = {},
 ): Promise<void> {
   const res = await fetch(`/api/v1/audiobooks/${id}/position`, {
     method: 'PUT',
@@ -48,6 +54,7 @@ export async function savePlaybackPosition(
       chapter_number: chapterNumber,
       position_seconds: positionSeconds,
     }),
+    keepalive: options.keepalive ?? false,
   })
   if (!res.ok) {
     throw new Error(`Failed to save playback position: ${res.status}`)

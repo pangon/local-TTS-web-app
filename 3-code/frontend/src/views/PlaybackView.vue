@@ -77,24 +77,78 @@ async function load() {
   }
 }
 
+/** Interval between automatic saves while audio is playing (ms). */
+const PERIODIC_SAVE_MS = 20000
+/** Active periodic-save timer while playing, or null when stopped. */
+let periodicSaveTimer: ReturnType<typeof setInterval> | null = null
+
 /**
  * Persists a chapter's position (and records it as the audiobook-level
  * bookmark). Updates local state and tolerates a failed network call so
  * playback is never interrupted by a bookmark error.
+ *
+ * `keepalive` is forwarded for saves fired during page unload so the request
+ * can outlive the document.
  */
-async function persistPosition(chapterNumber: number, positionSeconds: number) {
+async function persistPosition(
+  chapterNumber: number,
+  positionSeconds: number,
+  keepalive = false,
+) {
   savedPositions.value[String(chapterNumber)] = positionSeconds
   try {
-    await savePlaybackPosition(id, chapterNumber, positionSeconds)
+    await savePlaybackPosition(id, chapterNumber, positionSeconds, { keepalive })
   } catch {
     // Bookmark persistence is best-effort; ignore failures.
   }
 }
 
-/** Saves the current chapter and playback time (on pause, end, or unmount). */
-function saveCurrentPosition() {
+/**
+ * Saves the current chapter and playback time. Triggered on pause, end,
+ * chapter change, every few seconds while playing, on unmount, and on page
+ * navigation/reload/close (the last passes `useKeepalive`).
+ */
+function saveCurrentPosition(useKeepalive = false) {
   if (!book.value || !audioEl.value) return
-  void persistPosition(currentChapter.value, audioEl.value.currentTime)
+  void persistPosition(currentChapter.value, audioEl.value.currentTime, useKeepalive)
+}
+
+/** Starts saving the position every few seconds while playback continues. */
+function startPeriodicSave() {
+  stopPeriodicSave()
+  periodicSaveTimer = setInterval(() => saveCurrentPosition(), PERIODIC_SAVE_MS)
+}
+
+/** Stops the periodic save timer (on pause, end, or unmount). */
+function stopPeriodicSave() {
+  if (periodicSaveTimer !== null) {
+    clearInterval(periodicSaveTimer)
+    periodicSaveTimer = null
+  }
+}
+
+/** Begins periodic saving when playback starts. */
+function onPlay() {
+  startPeriodicSave()
+}
+
+/** Saves the position and stops periodic saving when playback halts. */
+function onPauseOrEnded() {
+  stopPeriodicSave()
+  saveCurrentPosition()
+}
+
+/**
+ * Saves the position when the page is being navigated away from, reloaded, or
+ * closed. Uses keepalive so the request survives the document teardown.
+ */
+function onPageHide() {
+  saveCurrentPosition(true)
+}
+
+/** Saves when the tab becomes hidden (covers mobile backgrounding/tab close). */
+function onVisibilityChange() {
+  if (document.visibilityState === 'hidden') saveCurrentPosition(true)
 }
 
 function goToChapter(chapterNumber: number) {
@@ -134,8 +188,21 @@ function onLoadedMetadata() {
   pendingSeek.value = 0
 }
 
-onMounted(load)
-onUnmounted(saveCurrentPosition)
+onMounted(() => {
+  void load()
+  // Save before the document is torn down by reload, tab/browser close, or a
+  // hard navigation away from the SPA.
+  window.addEventListener('pagehide', onPageHide)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('pagehide', onPageHide)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  stopPeriodicSave()
+  // Covers in-app route changes to another section of the site.
+  saveCurrentPosition()
+})
 </script>
 
 <template>
@@ -166,8 +233,9 @@ onUnmounted(saveCurrentPosition)
           class="audio-player"
           :src="currentAudioUrl"
           controls
-          @pause="saveCurrentPosition"
-          @ended="saveCurrentPosition"
+          @play="onPlay"
+          @pause="onPauseOrEnded"
+          @ended="onPauseOrEnded"
           @loadedmetadata="onLoadedMetadata"
         ></audio>
 

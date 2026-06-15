@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import PlaybackView from '../views/PlaybackView.vue'
 import type { AudiobookDetail } from '../api/audiobooks'
 import type { PlaybackPosition } from '../api/playback'
@@ -62,6 +62,11 @@ async function mountView() {
   await flushPromises()
   return wrapper
 }
+
+// Each PlaybackView registers global pagehide/visibilitychange listeners and
+// may start a periodic-save interval; auto-unmount keeps tests isolated by
+// running its onUnmounted cleanup (removing listeners and clearing the timer).
+enableAutoUnmount(afterEach)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -145,7 +150,7 @@ describe('PlaybackView', () => {
     await wrapper.find('audio').trigger('pause')
     await flushPromises()
 
-    expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 1, 33)
+    expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 1, 33, { keepalive: false })
   })
 
   it('resumes from the saved position when navigating to a previously listened chapter', async () => {
@@ -163,8 +168,8 @@ describe('PlaybackView', () => {
     await flushPromises()
 
     // Leaving chapter 1 is saved, and chapter 3 becomes the active bookmark
-    expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 1, 10)
-    expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 3, 77)
+    expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 1, 10, { keepalive: false })
+    expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 3, 77, { keepalive: false })
 
     // Audio switches to chapter 3 and seeks to its saved position
     expect(wrapper.find('audio').attributes('src')).toBe(
@@ -186,7 +191,7 @@ describe('PlaybackView', () => {
     await wrapper.findAll('.chapter-link')[1]!.trigger('click')
     await flushPromises()
 
-    expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 2, 0)
+    expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 2, 0, { keepalive: false })
 
     // No seek beyond start when metadata loads
     audio.currentTime = 0
@@ -210,5 +215,86 @@ describe('PlaybackView', () => {
     const navButtonsAfter = wrapper.find('.chapter-nav').findAll('button')
     expect(navButtonsAfter[0]!.attributes('disabled')).toBeUndefined()
     expect(navButtonsAfter[1]!.attributes('disabled')).toBeDefined()
+  })
+
+  it('saves the position every 20 seconds while playing', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = mount(PlaybackView)
+      await flushPromises()
+      const audio = wrapper.find('audio').element as HTMLMediaElement
+      trackCurrentTime(audio)
+
+      await wrapper.find('audio').trigger('play')
+      mockSavePosition.mockClear()
+
+      audio.currentTime = 20
+      vi.advanceTimersByTime(20000)
+      await flushPromises()
+      expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 1, 20, { keepalive: false })
+
+      audio.currentTime = 35
+      vi.advanceTimersByTime(20000)
+      await flushPromises()
+      expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 1, 35, { keepalive: false })
+      expect(mockSavePosition).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stops periodic saving once playback is paused', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = mount(PlaybackView)
+      await flushPromises()
+      const audio = wrapper.find('audio').element as HTMLMediaElement
+      trackCurrentTime(audio)
+
+      await wrapper.find('audio').trigger('play')
+      await wrapper.find('audio').trigger('pause')
+      mockSavePosition.mockClear()
+
+      // Well past one 20s interval: no save should fire once stopped.
+      vi.advanceTimersByTime(60000)
+      await flushPromises()
+      expect(mockSavePosition).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('saves the position with keepalive on page navigation/reload/close', async () => {
+    const wrapper = await mountView()
+    const audio = wrapper.find('audio').element as HTMLMediaElement
+    trackCurrentTime(audio)
+    audio.currentTime = 42
+    mockSavePosition.mockClear()
+
+    window.dispatchEvent(new Event('pagehide'))
+    await flushPromises()
+
+    expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 1, 42, { keepalive: true })
+  })
+
+  it('saves the position with keepalive when the tab becomes hidden', async () => {
+    const original = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState')
+    const wrapper = await mountView()
+    const audio = wrapper.find('audio').element as HTMLMediaElement
+    trackCurrentTime(audio)
+    audio.currentTime = 7
+    mockSavePosition.mockClear()
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden',
+    })
+    try {
+      document.dispatchEvent(new Event('visibilitychange'))
+      await flushPromises()
+      expect(mockSavePosition).toHaveBeenCalledWith('ab-1', 1, 7, { keepalive: true })
+    } finally {
+      if (original) Object.defineProperty(document, 'visibilityState', original)
+    }
   })
 })
