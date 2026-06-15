@@ -4,7 +4,7 @@
 
 Step-by-step instructions to build, run, and manually test the Local TTS Web App. This runbook is updated incrementally as new phases are completed.
 
-**Current coverage:** Phases 1-4 (Project Scaffolding, TTS Engine Foundation, Model Management End-to-End, Audiobook Synthesis End-to-End)
+**Current coverage:** Phases 1-4 (Project Scaffolding, TTS Engine Foundation, Model Management End-to-End, Model Adapter Abstraction & Loaders [Phase 3.1], Audiobook Synthesis End-to-End)
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ cd 3-code/backend
 pytest
 ```
 
-Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (file upload, validation, disk space check), library service (audiobook/chapter persistence), and SSE event wiring for job progress/completed/failed.
+Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (file upload, validation, disk space check), library service (audiobook/chapter persistence), SSE event wiring for job progress/completed/failed, the model adapter registry/protocol (`has_adapter`/`get_adapter`, `loader_available` flag), and the Kokoro and Qwen3-TTS adapters.
 
 ### Frontend Tests
 
@@ -208,6 +208,55 @@ Expected outcome: model downloads with real-time progress feedback.
 
 Expected outcome: model loads onto GPU with VRAM validation.
 
+### Phase 3.1: Model Adapter Abstraction & Loaders
+
+Phase 3.1 introduces the model adapter layer: each model in the compatible list is annotated with a `loader_available` flag indicating whether a concrete adapter is registered for it. Models **without** an adapter cannot be downloaded or loaded and are surfaced as such in the UI. Adapters currently implemented: **Kokoro-82M** (`hexgrad/Kokoro-82M`) and **Qwen3-TTS** (`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`).
+
+#### 3.1.1 `loader_available` exposed by the API
+
+1. Start the backend.
+2. Request the model list: `curl http://127.0.0.1:8000/api/models`.
+3. Verify each entry includes a `loader_available` boolean field.
+4. Verify `loader_available` is `true` for `hexgrad/Kokoro-82M` and `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`, and `false` for models without an adapter (e.g. `coqui/XTTS-v2`, `ResembleAI/chatterbox`).
+
+Expected outcome: the `GET /models` response reports adapter availability per model.
+
+#### 3.1.2 Models without an adapter are disabled in the UI
+
+1. Open the app and navigate to the Models page.
+2. Find a model whose `loader_available` is `false` (e.g. XTTS-v2, Chatterbox).
+3. Verify a "No adapter" badge is shown for that model.
+4. Verify **no** Download or Load button is rendered for it — the model cannot be downloaded or loaded from the UI.
+
+Expected outcome: models lacking an adapter are clearly marked and their actions are hidden.
+
+#### 3.1.3 Models with an adapter remain fully actionable
+
+1. On the Models page, find an adapter-backed model (Kokoro-82M or Qwen3-TTS).
+2. Verify **no** "No adapter" badge is shown.
+3. Verify the Download button appears when the model is not cached, and the Load button appears once cached (per Phase 3 tests 3.3 and 3.4).
+
+Expected outcome: adapter-backed models expose the normal download/load workflow.
+
+#### 3.1.4 Adapter-driven inference (Kokoro-82M)
+
+**Prerequisite:** `espeak-ng` must be installed and on PATH for non-English Kokoro synthesis (see Prerequisites). Download and load `hexgrad/Kokoro-82M` first (Phase 3 tests).
+
+1. With Kokoro loaded, run a short synthesis (Phase 4 workflow, or a preview once available).
+2. Verify synthesis produces real audio rather than a placeholder — the generated MP3 plays intelligible speech.
+3. By default, synthesis uses an Italian voice (`if_sara` or `im_nicola`) per `DEC-default-italian-language`.
+
+Expected outcome: the Kokoro adapter performs actual TTS inference through the `ModelAdapter` interface.
+
+#### 3.1.5 Adapter-driven inference (Qwen3-TTS)
+
+**Prerequisite:** Download and load `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` first.
+
+1. With Qwen3-TTS loaded, run a short synthesis.
+2. Verify synthesis produces real audio (intelligible speech), using the Italian default per `DEC-default-italian-language`.
+
+Expected outcome: the Qwen3-TTS adapter performs actual TTS inference through the `ModelAdapter` interface.
+
 ### Phase 4: Audiobook Synthesis End-to-End
 
 **Prerequisite:** A TTS model must be downloaded and loaded before testing synthesis. Complete Phase 3 tests (model download and load) first.
@@ -327,3 +376,6 @@ Not applicable — manual testing does not modify production state. If the appli
 | Progress bar not updating | Verify SSE connection is active in DevTools Network tab; check for `job-progress` events |
 | "Insufficient disk space" error | Free up disk space or use a smaller text file; the estimate is ~0.002 MB per character |
 | Audiobook title has underscores/hyphens | Expected: title is derived from filename with `-` and `_` replaced by spaces |
+| Model shows "No adapter" badge with no Download/Load buttons | Expected: no adapter is registered yet for that model. Use an adapter-backed model (Kokoro-82M or Qwen3-TTS), or implement the corresponding `TASK-loader-*` adapter |
+| `loader_available` is `false` for a model you expect to work | Confirm the adapter is registered in `_ADAPTER_REGISTRY` (`src/local_tts/tts/adapters/__init__.py`); restart the backend after registering |
+| Kokoro produces garbled or English-only audio for non-English text | Ensure `espeak-ng` is installed and on PATH (`sudo apt-get install espeak-ng`) |
