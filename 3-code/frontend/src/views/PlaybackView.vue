@@ -118,6 +118,14 @@ function goNext() {
   goToChapter(sortedChapters.value[currentIndex.value + 1]!.chapter_number)
 }
 
+/** Formats a file size in bytes as e.g. "3.2 MB", "812 KB", or "640 B". */
+function formatFileSize(bytes: number | null): string | null {
+  if (bytes === null || !isFinite(bytes) || bytes < 0) return null
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${bytes} B`
+}
+
 /** Seeks to the saved position once a chapter's audio metadata is available. */
 function onLoadedMetadata() {
   if (audioEl.value && pendingSeek.value > 0) {
@@ -140,10 +148,17 @@ onUnmounted(saveCurrentPosition)
 
     <template v-else-if="book">
       <h1>{{ book.title }}</h1>
+      <p class="book-model">Model: {{ book.model_id }}</p>
 
       <div class="player">
         <p class="now-playing">
           <span v-if="currentChapterInfo">{{ currentChapterInfo.title }}</span>
+          <span
+            v-if="currentChapterInfo && formatFileSize(currentChapterInfo.file_size_bytes)"
+            class="chapter-size"
+          >
+            · {{ formatFileSize(currentChapterInfo.file_size_bytes) }}
+          </span>
         </p>
 
         <audio
@@ -176,7 +191,10 @@ onUnmounted(saveCurrentPosition)
             :class="{ active: chapter.chapter_number === currentChapter }"
             @click="goToChapter(chapter.chapter_number)"
           >
-            {{ chapter.title }}
+            <span class="chapter-title">{{ chapter.title }}</span>
+            <span v-if="formatFileSize(chapter.file_size_bytes)" class="chapter-size">
+              {{ formatFileSize(chapter.file_size_bytes) }}
+            </span>
           </button>
         </li>
       </ul>
@@ -210,6 +228,12 @@ onUnmounted(saveCurrentPosition)
   color: #d32f2f;
 }
 
+.book-model {
+  color: #666;
+  font-size: 0.875rem;
+  margin: -0.5rem 0 1rem;
+}
+
 .player {
   margin-bottom: 1.5rem;
 }
@@ -217,6 +241,12 @@ onUnmounted(saveCurrentPosition)
 .now-playing {
   font-weight: 600;
   margin-bottom: 0.5rem;
+}
+
+.chapter-size {
+  color: #666;
+  font-weight: 400;
+  font-size: 0.875rem;
 }
 
 .audio-player {
@@ -247,6 +277,10 @@ onUnmounted(saveCurrentPosition)
 }
 
 .chapter-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   width: 100%;
   text-align: left;
   padding: 0.5rem 0.75rem;
@@ -256,6 +290,10 @@ onUnmounted(saveCurrentPosition)
   color: inherit;
   cursor: pointer;
   font-size: 0.875rem;
+}
+
+.chapter-link .chapter-size {
+  flex-shrink: 0;
 }
 
 .chapter-link:hover {

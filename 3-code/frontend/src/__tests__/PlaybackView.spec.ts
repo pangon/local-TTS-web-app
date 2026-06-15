@@ -36,6 +36,7 @@ function makeDetail(chapterCount: number): AudiobookDetail {
       chapter_number: i + 1,
       title: `Chapter ${i + 1}`,
       duration_seconds: 100,
+      file_size_bytes: 2 * 1024 * 1024, // 2.0 MB
     })),
   }
 }
@@ -74,6 +75,18 @@ describe('PlaybackView', () => {
     const wrapper = await mountView()
     expect(wrapper.find('h1').text()).toBe('My Book')
     expect(wrapper.find('audio.audio-player').exists()).toBe(true)
+  })
+
+  it('shows the TTS model used to generate the audiobook', async () => {
+    const wrapper = await mountView()
+    expect(wrapper.find('.book-model').text()).toContain('hexgrad/Kokoro-82M')
+  })
+
+  it('shows each chapter file size on disk in the chapter list', async () => {
+    const wrapper = await mountView()
+    const sizes = wrapper.findAll('.chapter-list .chapter-size')
+    expect(sizes).toHaveLength(3)
+    expect(sizes[0]!.text()).toContain('2.0 MB')
   })
 
   it('shows an error message when loading fails', async () => {

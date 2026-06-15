@@ -46,6 +46,7 @@ class ChapterInfo:
     chapter_number: int
     title: str
     duration_seconds: float | None
+    file_size_bytes: int | None
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,18 @@ class AudiobookDetail:
     language: str | None
     created_at: str
     chapters: list[ChapterInfo]
+
+
+def _file_size_or_none(audio_path: Path) -> int | None:
+    """Return the on-disk size of a chapter's audio file in bytes.
+
+    Returns ``None`` when the file is missing or unreadable, so a stale or
+    incomplete audiobook still lists its chapters without raising.
+    """
+    try:
+        return audio_path.stat().st_size
+    except OSError:
+        return None
 
 
 def _derive_title(source_filename: str) -> str:
@@ -200,13 +213,14 @@ class LibraryService:
                 return None
 
             chapter_rows = conn.execute(
-                "SELECT chapter_number, title, duration_seconds "
+                "SELECT chapter_number, title, duration_seconds, audio_filename "
                 "FROM chapter WHERE audiobook_id = ? ORDER BY chapter_number",
                 (audiobook_id,),
             ).fetchall()
         finally:
             conn.close()
 
+        audio_dir = self._data_dir / "audiobooks" / audiobook_id
         return AudiobookDetail(
             id=book["id"],
             title=book["title"],
@@ -220,6 +234,7 @@ class LibraryService:
                     chapter_number=ch["chapter_number"],
                     title=ch["title"],
                     duration_seconds=ch["duration_seconds"],
+                    file_size_bytes=_file_size_or_none(audio_dir / ch["audio_filename"]),
                 )
                 for ch in chapter_rows
             ],

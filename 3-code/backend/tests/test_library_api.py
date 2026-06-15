@@ -221,14 +221,35 @@ class TestGetAudiobook:
         body = response.json()
         assert body["id"] == "book-001"
         assert body["language"] == "it"
+        # The TTS model used for generation is part of the detail payload.
+        assert body["model_id"] == "hexgrad/Kokoro-82M"
         assert len(body["chapters"]) == 3
         assert body["chapters"][0] == {
             "chapter_number": 1,
             "title": "Intro",
             "duration_seconds": 60.0,
+            # _seed_audiobook writes b"fake-mp3-data" (13 bytes) per chapter.
+            "file_size_bytes": 13,
         }
         # Chapters are ordered by chapter_number
         assert [c["chapter_number"] for c in body["chapters"]] == [1, 2, 3]
+
+    @pytest.mark.anyio
+    async def test_chapter_file_size_is_null_when_audio_missing(
+        self, app: FastAPI, db_conn, tmp_data_dir: Path
+    ):
+        _seed_audiobook(
+            db_conn, tmp_data_dir, audiobook_id="book-001",
+            chapters=[(1, "Intro", 60.0)], with_audio_files=False,
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get("/api/v1/audiobooks/book-001")
+
+        assert response.status_code == 200
+        assert response.json()["chapters"][0]["file_size_bytes"] is None
 
     @pytest.mark.anyio
     async def test_unknown_audiobook_returns_404(self, app: FastAPI):

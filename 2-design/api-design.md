@@ -73,11 +73,13 @@ Returns audiobook details with full chapter list (`REQ-F-audiobook-playback`).
   "language": "it",
   "created_at": "2026-03-11T14:30:00Z",
   "chapters": [
-    {"chapter_number": 1, "title": "Chapter 1", "duration_seconds": 120.5},
-    {"chapter_number": 2, "title": "Chapter 2", "duration_seconds": 98.3}
+    {"chapter_number": 1, "title": "Chapter 1", "duration_seconds": 120.5, "file_size_bytes": 1932800},
+    {"chapter_number": 2, "title": "Chapter 2", "duration_seconds": 98.3, "file_size_bytes": 1572864}
   ]
 }
 ```
+
+`model_id` is the TTS model used to generate the audiobook (shown in the playback view). `file_size_bytes` is the on-disk size of each chapter's MP3 file; it is `null` when the audio file is missing or unreadable.
 
 **Response 404:** Audiobook not found.
 

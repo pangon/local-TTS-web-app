@@ -37,6 +37,7 @@ class ChapterResponse(BaseModel):
     chapter_number: int
     title: str
     duration_seconds: float | None
+    file_size_bytes: int | None
 
 
 class AudiobookDetailResponse(BaseModel):
@@ -96,6 +97,7 @@ async def get_audiobook(audiobook_id: str, request: Request) -> AudiobookDetailR
                 chapter_number=ch.chapter_number,
                 title=ch.title,
                 duration_seconds=ch.duration_seconds,
+                file_size_bytes=ch.file_size_bytes,
             )
             for ch in book.chapters
         ],

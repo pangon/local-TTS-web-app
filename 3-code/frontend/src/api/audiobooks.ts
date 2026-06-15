@@ -16,6 +16,7 @@ export interface Chapter {
   chapter_number: number
   title: string
   duration_seconds: number | null
+  file_size_bytes: number | null
 }
 
 export interface AudiobookDetail {
