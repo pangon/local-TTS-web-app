@@ -194,6 +194,10 @@ data/
 
 Model files are managed by the `huggingface_hub` library in its default cache directory and are not part of this data model.
 
+## Text Preprocessing (No Persistence)
+
+Text normalization (`GOAL-text-normalization`, `DEC-text-preprocessing-pipeline`) introduces **no new entities and no schema changes**. The normalized text is transient: it is produced synchronously by `POST /preprocess`, reviewed and confirmed by the user, then passed back to `POST /jobs/synthesis` (or `POST /jobs/preview`) and synthesized directly (`DEC-preprocess-review-flow`). It is never stored server-side. `Audiobook.source_filename` continues to hold the original uploaded filename, now supplied in the synthesis request body. Preprocessing configuration (language/model profiles, optional domain dictionary) lives in on-disk config files, not in the database.
+
 ## SQL Schema
 
 ```sql

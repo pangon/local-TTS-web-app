@@ -44,6 +44,7 @@ graph TB
             JobSvc[Job Service]
             ModelSvc[Model Service]
             MonSvc[Monitor Service]
+            PreSvc[Preprocessing Service]
         end
 
         subgraph "TTS Subpackage &#40;modular&#41;"
@@ -68,11 +69,13 @@ graph TB
     API --> JobSvc
     API --> ModelSvc
     API --> MonSvc
+    API --> PreSvc
 
     JobSvc --> Synth
     ModelSvc --> ModelLoader
     ModelSvc --> GPUVal
     JobSvc --> ChapterParser
+    PreSvc -->|reads loaded model| ModelSvc
 
     LibSvc --> DB
     LibSvc --> AudioFS
@@ -113,12 +116,12 @@ graph TB
 
 | View | Requirements Addressed |
 |------|----------------------|
-| Audiobook Creation | `REQ-F-upload-text-file`, `REQ-F-synthesize-audiobook`, `REQ-F-voice-language-selection`, `REQ-F-synthesis-progress` |
+| Audiobook Creation | `REQ-F-upload-text-file`, `REQ-USA-normalized-text-review`, `REQ-F-synthesize-audiobook`, `REQ-F-voice-language-selection`, `REQ-F-synthesis-progress` |
 | Library | `REQ-F-library-listing`, `REQ-F-delete-audiobook`, `REQ-F-download-audiobook` |
 | Playback | `REQ-F-audiobook-playback`, `REQ-F-playback-resume`, `REQ-F-chapter-split-output` |
 | Model Management | `REQ-F-model-listing`, `REQ-F-model-download`, `REQ-F-model-cache-view`, `REQ-F-model-delete` |
 | Monitoring | `REQ-F-job-monitoring`, `REQ-F-resource-monitoring` |
-| Text Preview | `REQ-F-text-preview` |
+| Text Preview | `REQ-F-text-preview`, `REQ-USA-normalized-text-review` |
 
 ### Application Services
 
@@ -154,6 +157,16 @@ graph TB
 - Reports currently loaded model info (`REQ-F-resource-monitoring`)
 - Exposes job status and history (`REQ-F-job-monitoring`)
 
+#### Preprocessing Service
+
+Transforms raw input text into TTS-ready text before synthesis (`GOAL-text-normalization`, `DEC-text-preprocessing-pipeline`). A dedicated backend service — **not** part of the TTS subpackage, which stays focused on GPU inference.
+
+- Runs a modular pipeline of discrete, independently testable stages (`REQ-MNT-preprocessing-pipeline`) — see [Text Preprocessing Pipeline](#text-preprocessing-pipeline) below.
+- Synchronous and CPU-bound; completes within bounded time (`REQ-PERF-preprocessing-overhead`: ≤10 s for ~2 MB, ≤1 s for ≤500-char preview).
+- Reads the currently loaded model (via the Model Service) to select the model-specific preprocessing configuration.
+- Returns the normalized text for the user to review and confirm before generation (`REQ-USA-normalized-text-review`, `DEC-preprocess-review-flow`); it does not persist anything.
+- Layout repair runs before chapter detection (which stays in the Job Service → Chapter Parser path), so reflow operates on the full document while chapter boundaries are preserved (`REQ-F-text-layout-repair`, `REQ-F-chapter-split-output`).
+
 ### TTS Subpackage (Modular)
 
 **Responsibility**: All TTS inference and GPU interaction, independent of the web framework.
@@ -178,6 +191,35 @@ class TTSEngine:
     def synthesize(text, progress_callback) -> list[AudioChunk]
     def get_gpu_status() -> GPUStatus
 ```
+
+### Text Preprocessing Pipeline
+
+The Preprocessing Service runs a modular pipeline of discrete, independently unit-testable stages (`REQ-MNT-preprocessing-pipeline`, `DEC-text-preprocessing-pipeline`). Default stage order (config-driven, refined through testing):
+
+| Order | Stage | Responsibility | Requirement |
+|-------|-------|----------------|-------------|
+| 1 | Unicode Sanitization | Remove invisible/control chars; NBSP and whitespace variants → normal spaces; normalize dash/quote variants; remove disallowed Unicode; emoji removed or verbalized per config | `REQ-F-text-unicode-sanitization` |
+| 2 | Layout Repair | Resolve end-of-line hyphenation; reflow sentences split across hard line breaks; strip isolated page numbers/layout fragments; normalize irregular whitespace; preserve paragraph and chapter boundaries | `REQ-F-text-layout-repair` |
+| 3 | Numeric & Symbolic Verbalization | Spell out cardinals/ordinals, dates, percentages, currency, and common symbols, language-aware | `REQ-F-text-numeric-symbolic-verbalization` |
+| 4 | Abbreviation Expansion | Verbalize common abbreviations/acronyms from a language-specific built-in set; apply an optional domain dictionary when supplied | `REQ-F-abbreviation-expansion` |
+
+```mermaid
+graph LR
+    Raw[Raw text] --> S1[Unicode Sanitization]
+    S1 --> S2[Layout Repair]
+    S2 --> S3[Numeric & Symbolic Verbalization]
+    S3 --> S4[Abbreviation Expansion]
+    S4 --> Norm[Normalized text]
+    Norm -->|user review & confirm| Synth2[Synthesis: chapter parse → TTS]
+```
+
+**Configuration (two axes, `REQ-MNT-preprocessing-pipeline`):**
+
+- **Language profile** — keyed by output language code (default `it`, `DEC-default-italian-language`): verbalization rule tables and the built-in abbreviation set.
+- **Model profile** — keyed by `model_id`, with a default fallback: which stages run and their parameters, accommodating different models' input expectations without modifying shared stage logic.
+- **Optional domain dictionary** — a file on disk (e.g. `config/preprocessing/domain_dictionary.json`) mapping acronyms/technical terms to spoken forms; applied when present, built-in defaults otherwise (`REQ-F-abbreviation-expansion`). Delivery mechanism refinable.
+
+Adding a new language or model is done by adding a profile/stage, not by editing existing shared stage logic.
 
 ### Storage
 
@@ -260,6 +302,13 @@ All dependencies are free and open-source (`REQ-COMP-foss-only`, `CON-zero-budge
 | `REQ-PERF-synthesis-latency` | Should-have | TTS Subpackage |
 | `REQ-F-default-voice-quality` | Should-have | TTS Subpackage, Model Service |
 | `REQ-PORT-browser-compat` | Should-have | Vue Frontend |
+| `REQ-F-text-unicode-sanitization` | Must-have | Preprocessing Service (Unicode Sanitization stage) |
+| `REQ-F-text-layout-repair` | Must-have | Preprocessing Service (Layout Repair stage) |
+| `REQ-F-text-numeric-symbolic-verbalization` | Must-have | Preprocessing Service (Numeric & Symbolic Verbalization stage) |
+| `REQ-F-abbreviation-expansion` | Should-have | Preprocessing Service (Abbreviation Expansion stage) |
+| `REQ-MNT-preprocessing-pipeline` | Should-have | Preprocessing Service |
+| `REQ-PERF-preprocessing-overhead` | Should-have | Preprocessing Service |
+| `REQ-USA-normalized-text-review` | Should-have | Preprocessing Service, REST API, Vue Frontend |
 
 ## Model-Specific Loading Requirements
 

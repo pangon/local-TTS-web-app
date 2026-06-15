@@ -170,19 +170,67 @@ Saves both the audiobook-level bookmark and the per-chapter timestamp (`REQ-F-pl
 
 ---
 
+## Text Preprocessing
+
+### Preprocess Text
+
+`POST /api/v1/preprocess`
+
+Runs the text-normalization pipeline synchronously and returns the normalized, TTS-ready text for the user to review before generation (`DEC-text-preprocessing-pipeline`, `DEC-preprocess-review-flow`, `REQ-USA-normalized-text-review`). Covers Unicode sanitization, layout repair, numeric/symbolic verbalization, and abbreviation expansion (`REQ-F-text-unicode-sanitization`, `REQ-F-text-layout-repair`, `REQ-F-text-numeric-symbolic-verbalization`, `REQ-F-abbreviation-expansion`). Completes within bounded time (`REQ-PERF-preprocessing-overhead`). Uses the currently loaded model to select the model-specific preprocessing profile.
+
+**Request:** `Content-Type: multipart/form-data`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | file | Conditional | `.txt` file, UTF-8 encoded, ≤ 2 MB (audiobook path) (`REQ-F-upload-text-file`) |
+| `text` | string | Conditional | Raw text input (preview path) |
+| `language` | string | No | Output language for verbalization rules (defaults to `it`) |
+
+Exactly one of `file` or `text` must be provided.
+
+**Response 200:**
+
+```json
+{
+  "normalized_text": "Normalized, TTS-ready text...",
+  "language": "it",
+  "model_id": "hexgrad/Kokoro-82M",
+  "original_char_count": 12873,
+  "normalized_char_count": 12010
+}
+```
+
+`normalized_text` is the exact text that will be synthesized if the user confirms. `model_id` is the currently loaded model whose profile was applied. `original_char_count` / `normalized_char_count` support a before/after review display.
+
+**Response 400:** Invalid file type (not `.txt`), file exceeds 2 MB, empty input, or neither/both of `file` and `text` supplied.
+
+**Response 409:** No model loaded: `{"detail": "No model loaded"}`.
+
+---
+
 ## Jobs
 
 ### Create Synthesis Job
 
 `POST /api/v1/jobs/synthesis`
 
-Uploads a `.txt` file and starts audiobook synthesis (`REQ-F-upload-text-file`, `REQ-F-synthesize-audiobook`). Performs disk space preflight check before queuing (`REQ-F-disk-space-preflight`). Uses the currently loaded model.
+Starts audiobook synthesis from the **confirmed normalized text** returned by `POST /preprocess` and approved by the user (`REQ-F-synthesize-audiobook`, `REQ-USA-normalized-text-review`, `DEC-preprocess-review-flow`). The `.txt` upload happens earlier at `/preprocess`; this endpoint receives the reviewed text as JSON and synthesizes **exactly** that text — it does **not** re-run preprocessing. Chapter detection runs on the provided text. Performs disk space preflight check before queuing (`REQ-F-disk-space-preflight`). Uses the currently loaded model.
 
-**Request:** `Content-Type: multipart/form-data`
+**Request:** `Content-Type: application/json`
+
+```json
+{
+  "text": "Confirmed normalized text...",
+  "source_filename": "my-book.txt",
+  "voice": "if_sara",
+  "language": "it"
+}
+```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `file` | file | Yes | `.txt` file, UTF-8 encoded, ≤ 2 MB |
+| `text` | string | Yes | Confirmed normalized text to synthesize |
+| `source_filename` | string | Yes | Original uploaded filename, used to derive the audiobook title |
 | `voice` | string | No | Voice selection (defaults to model default) |
 | `language` | string | No | Language selection (defaults to model default) |
 
@@ -198,7 +246,7 @@ Uploads a `.txt` file and starts audiobook synthesis (`REQ-F-upload-text-file`, 
 }
 ```
 
-**Response 400:** Invalid file type (not `.txt`) or file exceeds 2 MB.
+**Response 400:** Empty `text`.
 
 **Response 409:**
 - No model loaded: `{"detail": "No model loaded"}`
@@ -208,7 +256,7 @@ Uploads a `.txt` file and starts audiobook synthesis (`REQ-F-upload-text-file`, 
 
 `POST /api/v1/jobs/preview`
 
-Submits text for ephemeral TTS preview (`REQ-F-text-preview`). Uses the currently loaded model. Follows the async job pattern: returns a job ID, reports progress via SSE, audio fetched via `GET /jobs/{id}/audio` on completion. Preview audio is not saved to the library.
+Submits text for ephemeral TTS preview (`REQ-F-text-preview`). Uses the currently loaded model. The submitted `text` is the already-normalized text (the frontend runs it through `POST /preprocess` first, or the user reviews it inline per `REQ-USA-normalized-text-review`, `DEC-preprocess-review-flow`); this endpoint synthesizes exactly the provided `text` and does not re-run preprocessing. Follows the async job pattern: returns a job ID, reports progress via SSE, audio fetched via `GET /jobs/{id}/audio` on completion. Preview audio is not saved to the library.
 
 **Request:**
 
@@ -527,7 +575,7 @@ data: {"model_id": "facebook/mms-tts-eng", "error_message": "Network error"}
 
 | Requirement | Priority | Endpoint(s) |
 |-------------|----------|-------------|
-| `REQ-F-upload-text-file` | Must-have | `POST /jobs/synthesis` |
+| `REQ-F-upload-text-file` | Must-have | `POST /preprocess` (file upload) |
 | `REQ-F-synthesize-audiobook` | Must-have | `POST /jobs/synthesis` |
 | `REQ-F-chapter-split-output` | Must-have | `GET /audiobooks/{id}` (chapter list) |
 | `REQ-F-synthesis-progress` | Must-have | `GET /events` (job-progress, job-completed, job-failed) |
@@ -555,6 +603,13 @@ data: {"model_id": "facebook/mms-tts-eng", "error_message": "Network error"}
 | `REQ-PERF-synthesis-latency` | Should-have | Implementation concern (not API-specific) |
 | `REQ-F-default-voice-quality` | Should-have | `GET /models/{id}/voices` (default_voice, default_language) |
 | `REQ-PORT-browser-compat` | Should-have | Frontend concern (EventSource API) |
+| `REQ-F-text-unicode-sanitization` | Must-have | `POST /preprocess` |
+| `REQ-F-text-layout-repair` | Must-have | `POST /preprocess` |
+| `REQ-F-text-numeric-symbolic-verbalization` | Must-have | `POST /preprocess` |
+| `REQ-F-abbreviation-expansion` | Should-have | `POST /preprocess` |
+| `REQ-MNT-preprocessing-pipeline` | Should-have | `POST /preprocess` (pipeline structure; not API-specific) |
+| `REQ-PERF-preprocessing-overhead` | Should-have | `POST /preprocess` (synchronous latency bound) |
+| `REQ-USA-normalized-text-review` | Should-have | `POST /preprocess`, `POST /jobs/synthesis` (confirmed text) |
 
 ## Design Risks
 

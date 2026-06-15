@@ -54,3 +54,5 @@
 | [DEC-tts-as-backend-module](../../2-design/decisions/DEC-tts-as-backend-module.md) | TTS Engine as Backend Submodule | When implementing TTS engine functionality or organizing backend package structure |
 | [DEC-python-backend-env](../../2-design/decisions/DEC-python-backend-env.md) | Python Backend Environment Conventions | When installing dependencies, running tests, or adding new Python modules |
 | [DEC-default-italian-language](../../2-design/decisions/DEC-default-italian-language.md) | Italian as Default Language for All Adapters | When implementing a new model adapter or modifying adapter default configuration |
+| [DEC-text-preprocessing-pipeline](../../2-design/decisions/DEC-text-preprocessing-pipeline.md) | Modular Backend Text-Preprocessing Pipeline | When implementing or modifying the Preprocessing Service, any pipeline stage, or stage configuration |
+| [DEC-preprocess-review-flow](../../2-design/decisions/DEC-preprocess-review-flow.md) | Synchronous Preprocess-then-Confirm Synthesis Flow | When implementing the `/preprocess` endpoint or the `/jobs/synthesis` and `/jobs/preview` request handling |

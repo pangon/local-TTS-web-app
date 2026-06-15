@@ -27,6 +27,7 @@
 | [REQ-F-resource-monitoring](../../1-objectives/requirements/REQ-F-resource-monitoring.md) | Functional | Should-have | View system resource usage |
 | [REQ-F-text-preview](../../1-objectives/requirements/REQ-F-text-preview.md) | Functional | Should-have | Preview TTS with sample text |
 | [REQ-PORT-browser-compat](../../1-objectives/requirements/REQ-PORT-browser-compat.md) | Portability | Should-have | Support major browsers |
+| [REQ-USA-normalized-text-review](../../1-objectives/requirements/REQ-USA-normalized-text-review.md) | Usability | Should-have | Review and confirm normalized text before generation |
 
 ## Relevant Decisions
 
@@ -35,3 +36,4 @@
 | [DEC-vue3-frontend](../../2-design/decisions/DEC-vue3-frontend.md) | Vue 3 + Vite Frontend | When implementing any frontend functionality |
 | [DEC-sse-progress](../../2-design/decisions/DEC-sse-progress.md) | Server-Sent Events for Real-Time Updates | When implementing progress reporting or live status updates |
 | [DEC-frontend-dev-env](../../2-design/decisions/DEC-frontend-dev-env.md) | Frontend Development Environment Conventions | When installing dependencies, running tests, building, or adding new frontend modules |
+| [DEC-preprocess-review-flow](../../2-design/decisions/DEC-preprocess-review-flow.md) | Synchronous Preprocess-then-Confirm Synthesis Flow | When implementing the audiobook-creation review step or the text-preview inline review |
