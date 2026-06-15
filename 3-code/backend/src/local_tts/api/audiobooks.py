@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from local_tts.services.library_service import LibraryService
@@ -97,6 +98,28 @@ async def get_audiobook(audiobook_id: str, request: Request) -> AudiobookDetailR
             for ch in book.chapters
         ],
     )
+
+
+@router.get("/{audiobook_id}/chapters/{chapter_number}/audio")
+async def stream_chapter_audio(
+    audiobook_id: str, chapter_number: int, request: Request
+) -> FileResponse:
+    """Stream a chapter's MP3 audio for in-browser playback.
+
+    Served via :class:`FileResponse`, which honours HTTP ``Range`` requests
+    (responding 206 with ``Content-Range`` and advertising ``Accept-Ranges:
+    bytes``) so the player can seek without downloading the whole file
+    (REQ-F-audiobook-playback).
+    """
+    service = _get_library_service(request)
+    audio_path = service.get_chapter_audio_path(audiobook_id, chapter_number)
+    if audio_path is None:
+        raise HTTPException(status_code=404, detail="Chapter audio not found")
+
+    # No `filename` argument: the audio is streamed for inline playback, so we
+    # avoid the `Content-Disposition: attachment` header FileResponse adds when
+    # a filename is given (downloads are handled by a separate ZIP endpoint).
+    return FileResponse(path=audio_path, media_type="audio/mpeg")
 
 
 @router.delete("/{audiobook_id}", status_code=204)

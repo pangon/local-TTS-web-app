@@ -222,6 +222,42 @@ class LibraryService:
             ],
         )
 
+    def get_chapter_audio_path(
+        self, audiobook_id: str, chapter_number: int
+    ) -> Path | None:
+        """Return the on-disk MP3 path for a chapter, or ``None`` if absent.
+
+        Used by the chapter audio streaming endpoint (REQ-F-audiobook-playback).
+        Returns ``None`` when the audiobook/chapter pair has no record, or when
+        the recorded audio file is missing from disk.  The filename comes from
+        the ``chapter`` table (not the request), so the resolved path stays
+        within ``audiobooks/<audiobook_id>/``.
+        """
+        conn = get_connection(self._data_dir)
+        try:
+            row = conn.execute(
+                "SELECT audio_filename FROM chapter "
+                "WHERE audiobook_id = ? AND chapter_number = ?",
+                (audiobook_id, chapter_number),
+            ).fetchone()
+        finally:
+            conn.close()
+
+        if row is None:
+            return None
+
+        audio_path = self._data_dir / "audiobooks" / audiobook_id / row[0]
+        if not audio_path.is_file():
+            logger.warning(
+                "Chapter audio file missing on disk: %s (audiobook %s, chapter %d)",
+                audio_path,
+                audiobook_id,
+                chapter_number,
+            )
+            return None
+
+        return audio_path
+
     def delete_audiobook(self, audiobook_id: str) -> bool:
         """Delete an audiobook, its DB records, and its audio files.
 

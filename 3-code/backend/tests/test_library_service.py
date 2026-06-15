@@ -320,3 +320,69 @@ class TestTransactionalBehavior:
         assert audiobook is not None
         assert len(chapters) == 2
         assert job_link[0] == "book-001"
+
+
+# ---------------------------------------------------------------------------
+# get_chapter_audio_path
+# ---------------------------------------------------------------------------
+
+
+class TestGetChapterAudioPath:
+    def _seed_chapter(
+        self,
+        db_conn,
+        data_dir: Path,
+        *,
+        audiobook_id: str = "book-001",
+        chapter_number: int = 1,
+        write_file: bool = True,
+    ) -> Path:
+        db_conn.execute(
+            "INSERT OR IGNORE INTO audiobook "
+            "(id, title, source_filename, model_id) VALUES (?, 'Book', 'b.txt', 'm')",
+            (audiobook_id,),
+        )
+        audio_filename = f"chapter-{chapter_number:02d}.mp3"
+        db_conn.execute(
+            "INSERT INTO chapter "
+            "(id, audiobook_id, chapter_number, title, audio_filename, duration_seconds) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                f"{audiobook_id}-ch{chapter_number}",
+                audiobook_id,
+                chapter_number,
+                f"Chapter {chapter_number}",
+                audio_filename,
+                60.0,
+            ),
+        )
+        db_conn.commit()
+
+        audio_path = data_dir / "audiobooks" / audiobook_id / audio_filename
+        if write_file:
+            audio_path.parent.mkdir(parents=True, exist_ok=True)
+            audio_path.write_bytes(b"mp3")
+        return audio_path
+
+    def test_returns_path_for_existing_chapter_file(
+        self, library_service: LibraryService, db_conn, tmp_data_dir: Path
+    ):
+        expected = self._seed_chapter(db_conn, tmp_data_dir)
+        assert library_service.get_chapter_audio_path("book-001", 1) == expected
+
+    def test_returns_none_for_unknown_audiobook(
+        self, library_service: LibraryService
+    ):
+        assert library_service.get_chapter_audio_path("nope", 1) is None
+
+    def test_returns_none_for_unknown_chapter_number(
+        self, library_service: LibraryService, db_conn, tmp_data_dir: Path
+    ):
+        self._seed_chapter(db_conn, tmp_data_dir, chapter_number=1)
+        assert library_service.get_chapter_audio_path("book-001", 99) is None
+
+    def test_returns_none_when_file_missing_on_disk(
+        self, library_service: LibraryService, db_conn, tmp_data_dir: Path
+    ):
+        self._seed_chapter(db_conn, tmp_data_dir, write_file=False)
+        assert library_service.get_chapter_audio_path("book-001", 1) is None

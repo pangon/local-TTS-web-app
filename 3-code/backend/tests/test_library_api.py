@@ -238,6 +238,116 @@ class TestGetAudiobook:
 
 
 # ---------------------------------------------------------------------------
+# GET /audiobooks/{id}/chapters/{n}/audio — streaming
+# ---------------------------------------------------------------------------
+
+
+class TestStreamChapterAudio:
+    @pytest.mark.anyio
+    async def test_returns_audio_with_accept_ranges(
+        self, app: FastAPI, db_conn, tmp_data_dir: Path
+    ):
+        _seed_audiobook(db_conn, tmp_data_dir, audiobook_id="book-001")
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/v1/audiobooks/book-001/chapters/1/audio"
+            )
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "audio/mpeg"
+        assert response.headers["accept-ranges"] == "bytes"
+        # Inline playback — not an attachment download.
+        assert "content-disposition" not in response.headers
+        assert response.content == b"fake-mp3-data"
+
+    @pytest.mark.anyio
+    async def test_range_request_returns_partial_content(
+        self, app: FastAPI, db_conn, tmp_data_dir: Path
+    ):
+        _seed_audiobook(db_conn, tmp_data_dir, audiobook_id="book-001")
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/v1/audiobooks/book-001/chapters/1/audio",
+                headers={"Range": "bytes=0-3"},
+            )
+
+        # "fake-mp3-data" -> bytes 0-3 inclusive = "fake"
+        assert response.status_code == 206
+        assert response.headers["content-range"] == "bytes 0-3/13"
+        assert response.content == b"fake"
+
+    @pytest.mark.anyio
+    async def test_unsatisfiable_range_returns_416(
+        self, app: FastAPI, db_conn, tmp_data_dir: Path
+    ):
+        _seed_audiobook(db_conn, tmp_data_dir, audiobook_id="book-001")
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/v1/audiobooks/book-001/chapters/1/audio",
+                headers={"Range": "bytes=9999-10000"},
+            )
+
+        assert response.status_code == 416
+
+    @pytest.mark.anyio
+    async def test_unknown_audiobook_returns_404(self, app: FastAPI):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/v1/audiobooks/does-not-exist/chapters/1/audio"
+            )
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Chapter audio not found"
+
+    @pytest.mark.anyio
+    async def test_unknown_chapter_returns_404(
+        self, app: FastAPI, db_conn, tmp_data_dir: Path
+    ):
+        _seed_audiobook(
+            db_conn, tmp_data_dir, audiobook_id="book-001",
+            chapters=[(1, "Only Chapter", 60.0)],
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/v1/audiobooks/book-001/chapters/99/audio"
+            )
+
+        assert response.status_code == 404
+
+    @pytest.mark.anyio
+    async def test_missing_file_on_disk_returns_404(
+        self, app: FastAPI, db_conn, tmp_data_dir: Path
+    ):
+        """Chapter row exists but the audio file was never written / was removed."""
+        _seed_audiobook(
+            db_conn, tmp_data_dir, audiobook_id="book-001", with_audio_files=False
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/v1/audiobooks/book-001/chapters/1/audio"
+            )
+
+        assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
 # DELETE /audiobooks/{id}
 # ---------------------------------------------------------------------------
 
