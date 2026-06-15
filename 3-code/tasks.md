@@ -78,6 +78,7 @@
 | TASK-loader-zonos | Implement Zonos adapter using zonos pip package | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: zonos; Italian limited |
 | TASK-loader-fish-speech | Implement Fish Speech adapter using Fish Speech repo | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: fish-speech; Italian <10K hrs training data |
 | TASK-loader-higgs-audio | Implement Higgs Audio V2 adapter (transformers>=5.3 or dedicated package) | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Requires transformers 5.3+; Italian partial |
+| TASK-schema-migration-mechanism | Implement schema versioning (PRAGMA user_version) and a startup migration runner; baseline current schema as v1 | P0 | Todo | - | TASK-sqlite-schema-init | 2026-06-15 | Phase 10. Evolve the SQLite schema without data loss; record DEC-schema-migrations when executed. Currently init_db uses CREATE TABLE IF NOT EXISTS with no migration path |
 
 ### Frontend
 
@@ -108,6 +109,7 @@
 | TASK-phase-6-manual-testing | Update runbook and component docs for voice selection and text preview capabilities | P2 | Todo | - | TASK-text-preview-view | 2026-03-15 | |
 | TASK-phase-7-manual-testing | Update runbook and component docs for monitoring, downloads, and cache management | P2 | Todo | - | TASK-model-cache-ui | 2026-03-15 | |
 | TASK-phase-8-manual-testing | Update runbook and component docs for deployment and setup documentation | P2 | Todo | - | TASK-setup-documentation | 2026-03-15 | |
+| TASK-phase-10-manual-testing | Update runbook and component docs for the database migration mechanism (version check, upgrade, reset) | P1 | Todo | - | TASK-schema-migration-mechanism | 2026-06-15 | Covers Phase 10 |
 
 ---
 
@@ -278,3 +280,17 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 8. TASK-loader-zonos
 9. TASK-loader-fish-speech
 10. TASK-loader-higgs-audio
+
+### Phase 10: Database Migrations
+
+**Capabilities delivered:**
+- Schema version tracking via `PRAGMA user_version`
+- Ordered migration runner applied automatically at startup, evolving an existing SQLite database without data loss
+- Current schema baselined as version 1
+- Documented procedure for upgrading or resetting the local database
+
+> **Note:** Today `init_db` uses `CREATE TABLE IF NOT EXISTS` with no migration path (the `SCHEMA_VERSION` constant is unused), so schema changes (e.g. the ISO 8601 timestamp defaults) only apply to freshly created databases. This phase is **independent of Phases 6–9** and should ideally land before any real (non-disposable) user data accumulates; its position as Phase 10 reflects sequencing in the plan, not low importance.
+
+**Tasks:**
+1. TASK-schema-migration-mechanism
+2. TASK-phase-10-manual-testing
