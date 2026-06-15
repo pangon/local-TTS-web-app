@@ -17,11 +17,11 @@ import sqlite3
 import threading
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
 from local_tts.db import get_connection
+from local_tts.timeutils import utcnow_iso
 from local_tts.tts.engine import TTSEngine
 from local_tts.tts.synthesizer import SynthesisResult
 
@@ -81,10 +81,6 @@ class _SynthesisWork:
     text: str
     voice: str | None
     language: str | None
-
-
-def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _row_to_job_info(row: tuple) -> JobInfo:
@@ -164,7 +160,7 @@ class JobService:
             A snapshot of the newly created job.
         """
         job_id = str(uuid.uuid4())
-        now = _utcnow_iso()
+        now = utcnow_iso()
 
         self._db_conn.execute(
             "INSERT INTO job (id, type, status, progress, created_at) "
@@ -247,7 +243,7 @@ class JobService:
     ) -> None:
         """Execute a single synthesis job end-to-end."""
         job_id = work.job_id
-        now = _utcnow_iso()
+        now = utcnow_iso()
 
         # Transition: queued -> processing
         conn.execute(
@@ -291,7 +287,7 @@ class JobService:
             )
 
             # Transition: processing -> completed
-            completed_at = _utcnow_iso()
+            completed_at = utcnow_iso()
             conn.execute(
                 "UPDATE job SET status = 'completed', progress = 100, "
                 "completed_at = ? WHERE id = ?",
@@ -330,7 +326,7 @@ class JobService:
         error_message: str,
     ) -> None:
         """Transition a job to the failed state."""
-        completed_at = _utcnow_iso()
+        completed_at = utcnow_iso()
         conn.execute(
             "UPDATE job SET status = 'failed', error_message = ?, "
             "completed_at = ? WHERE id = ?",

@@ -18,22 +18,12 @@ from __future__ import annotations
 import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 
 from local_tts.db import get_connection
+from local_tts.timeutils import utcnow_iso
 
 logger = logging.getLogger(__name__)
-
-
-def _utcnow_iso() -> str:
-    """UTC timestamp as ISO 8601 with a trailing ``Z`` (api-design Conventions).
-
-    Used for the ``updated_at`` columns: the SQLite column default only fires
-    on INSERT, so the UPDATE branch of an upsert must set it explicitly to keep
-    the timestamp fresh.
-    """
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 @dataclass(frozen=True)
@@ -105,7 +95,9 @@ class PlaybackService:
         chapter's ``position_seconds``).  Returns ``True`` on success, or
         ``False`` if the audiobook does not exist (the caller maps this to 404).
         """
-        now = _utcnow_iso()
+        # updated_at is set explicitly: the SQLite column default only fires on
+        # INSERT, so the UPDATE branch of the upsert must refresh it.
+        now = utcnow_iso()
         conn = get_connection(self._data_dir)
         try:
             if not self._audiobook_exists(conn, audiobook_id):
