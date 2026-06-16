@@ -109,6 +109,10 @@ class TestPipelineOrdering:
         assert _service().preprocess("hi").normalized_text == "hiUL"
 
     def test_stage_names_for_reflects_registered_subset(self):
+        # Other real stages self-register on import; start from a controlled
+        # empty registry (the autouse fixture restores it) so this asserts the
+        # ordering of exactly the two stages registered here.
+        st._STAGE_REGISTRY.clear()
         register_stage(LayoutMarker)
         register_stage(UnicodeMarker)
         # Canonical order preserved regardless of registration order (AC4).

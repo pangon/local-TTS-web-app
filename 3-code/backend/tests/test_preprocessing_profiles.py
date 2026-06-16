@@ -106,6 +106,10 @@ class TestModelProfile:
         assert default_model_profile().stages == ()
 
     def test_default_profile_is_registered_subset_in_canonical_order(self):
+        # Other real stages self-register on import; start from a controlled
+        # empty registry (the autouse fixture restores it) so this asserts the
+        # ordering of exactly the two stages registered here.
+        st._STAGE_REGISTRY.clear()
         # Register out of canonical order; resolution preserves canonical order.
         st.register_stage(_stage_class(STAGE_LAYOUT_REPAIR))
         st.register_stage(_stage_class(STAGE_UNICODE_SANITIZATION))

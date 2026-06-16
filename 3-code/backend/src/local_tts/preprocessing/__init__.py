@@ -49,6 +49,10 @@ from local_tts.preprocessing.stages import (
     register_stage,
 )
 from local_tts.preprocessing.layout_repair import LayoutRepairStage
+from local_tts.preprocessing.numeric_symbolic_verbalization import (
+    BUILTIN_LANGUAGE_DATA as _NUMERIC_LANGUAGE_DATA,
+    NumericSymbolicVerbalizationStage,
+)
 from local_tts.preprocessing.unicode_sanitization import (
     BUILTIN_LANGUAGE_DATA as _UNICODE_LANGUAGE_DATA,
     UnicodeSanitizationStage,
@@ -71,6 +75,10 @@ for _language, _data in _UNICODE_LANGUAGE_DATA.items():
 # so it registers the stage alone.
 register_stage(LayoutRepairStage)
 
+register_stage(NumericSymbolicVerbalizationStage)
+for _language, _data in _NUMERIC_LANGUAGE_DATA.items():
+    register_language_data(_language, _data)
+
 __all__ = [
     "PreprocessingService",
     "PreprocessResult",
@@ -88,6 +96,7 @@ __all__ = [
     "STAGE_ABBREVIATION_EXPANSION",
     "UnicodeSanitizationStage",
     "LayoutRepairStage",
+    "NumericSymbolicVerbalizationStage",
     "register_stage",
     "get_stage",
     "has_stage",
