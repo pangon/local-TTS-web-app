@@ -17,3 +17,15 @@ STATIC_DIR: Path = Path(
         str(Path(__file__).resolve().parents[3] / "frontend" / "dist"),
     )
 )
+
+# Text-preprocessing configuration (DEC-text-preprocessing-pipeline). The
+# optional domain dictionary is loaded from here when present; its absence
+# must not break preprocessing.
+PREPROCESSING_CONFIG_DIR: Path = Path(
+    os.environ.get(
+        "LOCAL_TTS_PREPROCESSING_CONFIG_DIR",
+        str(Path(__file__).resolve().parents[2] / "config" / "preprocessing"),
+    )
+)
+
+DOMAIN_DICTIONARY_PATH: Path = PREPROCESSING_CONFIG_DIR / "domain_dictionary.json"
