@@ -16,6 +16,7 @@ from local_tts.api.sse import EventBus
 from local_tts.db import init_db
 from local_tts.services.job_service import JobService, SynthesisJobResult
 from local_tts.services.library_service import LibraryService
+from local_tts.preprocessing import PreprocessingService
 from local_tts.services.model_service import ModelService
 from local_tts.services.playback_service import PlaybackService
 from local_tts.spa import SPAStaticFiles
@@ -129,6 +130,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Step 5b: Initialize Playback Service (TASK-playback-position-api)
     app.state.playback_service = PlaybackService(config.DATA_DIR)
+
+    # Step 5c: Initialize Preprocessing Service (TASK-preprocess-api).
+    # Synchronous, GPU-agnostic text normalization (DEC-text-preprocessing-pipeline);
+    # the optional domain dictionary is loaded from the configured default path
+    # and its absence does not break preprocessing.
+    app.state.preprocessing_service = PreprocessingService()
 
     # Step 6: Wire job callbacks to Library Service and SSE EventBus
     _wire_job_callbacks(
