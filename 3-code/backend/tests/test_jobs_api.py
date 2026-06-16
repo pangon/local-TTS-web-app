@@ -1,19 +1,25 @@
-"""Tests for synthesis job API endpoint (TASK-synthesis-job-api).
+"""Tests for synthesis job API endpoint (TASK-synthesis-api-text-input).
 
-Covers:
-- POST /api/v1/jobs/synthesis — create synthesis job from .txt file upload
-- File validation: extension, size limit, UTF-8 encoding, empty content
+Covers the JSON contract of ``POST /api/v1/jobs/synthesis`` introduced by the
+preprocess-then-confirm flow (DEC-preprocess-review-flow), which supersedes the
+multipart file-upload contract of TASK-synthesis-job-api (file upload and text
+validation now live at ``POST /preprocess`` / ``tests/test_preprocess_api.py``):
+
+- POST /api/v1/jobs/synthesis — create synthesis job from confirmed JSON text
+- Input validation: empty / whitespace-only text (400); missing required
+  fields (422 via FastAPI)
+- Synthesizes exactly the confirmed text — no re-preprocessing
+  (REQ-USA-normalized-text-review)
 - Model loaded check (409 when no model loaded)
-- Disk space preflight check (409 when insufficient)
+- Disk space preflight check derived from text length (409 when insufficient)
 - Successful job creation returns 201 with correct shape
 - Optional voice and language parameters forwarded to JobService
 """
 
 from __future__ import annotations
 
-import io
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -64,14 +70,15 @@ def test_app():
     return app, mock_job_service, mock_tts_engine
 
 
-def _txt_file(content: str = "Hello world", filename: str = "book.txt") -> dict:
-    """Build a multipart file upload dict for httpx."""
-    return {"file": (filename, io.BytesIO(content.encode("utf-8")), "text/plain")}
-
-
-def _binary_file(content: bytes, filename: str = "book.txt") -> dict:
-    """Build a multipart file upload dict with raw bytes."""
-    return {"file": (filename, io.BytesIO(content), "application/octet-stream")}
+def _body(
+    text: str = "Hello world",
+    source_filename: str = "book.txt",
+    **extra: object,
+) -> dict:
+    """Build a JSON request body for the synthesis endpoint."""
+    payload: dict = {"text": text, "source_filename": source_filename}
+    payload.update(extra)
+    return payload
 
 
 # ---------------------------------------------------------------------------
@@ -82,15 +89,13 @@ def _binary_file(content: bytes, filename: str = "book.txt") -> dict:
 class TestCreateSynthesisJobSuccess:
     @pytest.mark.anyio
     async def test_returns_201_with_job_info(self, test_app):
-        app, mock_svc, _ = test_app
+        app, _, _ = test_app
         with patch("local_tts.api.jobs.shutil.disk_usage") as mock_disk:
             mock_disk.return_value = MagicMock(free=10 * 1024 * 1024 * 1024)  # 10 GB
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as client:
-                resp = await client.post(
-                    "/api/v1/jobs/synthesis", files=_txt_file("Hello world")
-                )
+                resp = await client.post("/api/v1/jobs/synthesis", json=_body())
 
         assert resp.status_code == 201
         data = resp.json()
@@ -110,7 +115,7 @@ class TestCreateSynthesisJobSuccess:
             ) as client:
                 await client.post(
                     "/api/v1/jobs/synthesis",
-                    files=_txt_file("Some text content", "my-book.txt"),
+                    json=_body("Some text content", "my-book.txt"),
                 )
 
         mock_svc.create_synthesis_job.assert_called_once_with(
@@ -130,8 +135,7 @@ class TestCreateSynthesisJobSuccess:
             ) as client:
                 await client.post(
                     "/api/v1/jobs/synthesis",
-                    files=_txt_file("Text"),
-                    data={"voice": "af_heart", "language": "en"},
+                    json=_body("Text", voice="af_heart", language="en"),
                 )
 
         mock_svc.create_synthesis_job.assert_called_once_with(
@@ -150,7 +154,7 @@ class TestCreateSynthesisJobSuccess:
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as client:
                 resp = await client.post(
-                    "/api/v1/jobs/synthesis", files=_txt_file("Hello")
+                    "/api/v1/jobs/synthesis", json=_body("Hello")
                 )
 
         data = resp.json()
@@ -158,107 +162,109 @@ class TestCreateSynthesisJobSuccess:
 
 
 # ---------------------------------------------------------------------------
-# File validation (REQ-F-upload-text-file)
+# Synthesize exactly the confirmed text — no re-preprocessing
+# (REQ-USA-normalized-text-review, DEC-preprocess-review-flow)
 # ---------------------------------------------------------------------------
 
 
-class TestFileValidation:
+class TestSynthesizesExactConfirmedText:
     @pytest.mark.anyio
-    async def test_400_non_txt_extension(self, test_app):
-        app, _, _ = test_app
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.post(
-                "/api/v1/jobs/synthesis",
-                files={"file": ("book.pdf", io.BytesIO(b"content"), "application/pdf")},
-            )
-        assert resp.status_code == 400
-        assert ".txt" in resp.json()["detail"]
-
-    @pytest.mark.anyio
-    async def test_400_file_exceeds_2mb(self, test_app):
-        app, _, _ = test_app
-        large_content = b"x" * (2 * 1024 * 1024 + 1)
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.post(
-                "/api/v1/jobs/synthesis",
-                files=_binary_file(large_content, "big.txt"),
-            )
-        assert resp.status_code == 400
-        assert "2 MB" in resp.json()["detail"]
-
-    @pytest.mark.anyio
-    async def test_400_invalid_utf8(self, test_app):
-        app, _, _ = test_app
-        invalid_utf8 = b"\xff\xfe" + b"Hello"
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.post(
-                "/api/v1/jobs/synthesis",
-                files=_binary_file(invalid_utf8, "bad.txt"),
-            )
-        assert resp.status_code == 400
-        assert "UTF-8" in resp.json()["detail"]
-
-    @pytest.mark.anyio
-    async def test_400_empty_file(self, test_app):
-        app, _, _ = test_app
+    async def test_text_passed_through_verbatim(self, test_app):
+        app, mock_svc, _ = test_app
+        # Text that already went through preprocessing: numbers verbalized,
+        # symbols expanded. The endpoint must forward it byte-for-byte and must
+        # NOT re-normalize it (e.g. it must not turn "venticinque" back, nor
+        # touch the already-spelled-out "per cento").
+        confirmed = "Capitolo primo. Erano le venticinque per cento delle voci."
         with patch("local_tts.api.jobs.shutil.disk_usage") as mock_disk:
             mock_disk.return_value = MagicMock(free=10 * 1024 * 1024 * 1024)
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as client:
-                resp = await client.post(
-                    "/api/v1/jobs/synthesis", files=_txt_file("")
+                await client.post(
+                    "/api/v1/jobs/synthesis", json=_body(confirmed, "doc.txt")
                 )
+
+        _, kwargs = mock_svc.create_synthesis_job.call_args
+        assert kwargs["text"] == confirmed
+
+    @pytest.mark.anyio
+    async def test_no_preprocessing_service_invoked(self, test_app):
+        app, _, _ = test_app
+        # The endpoint must not depend on a preprocessing service at all.
+        app.state.preprocessing_service = MagicMock()
+        with patch("local_tts.api.jobs.shutil.disk_usage") as mock_disk:
+            mock_disk.return_value = MagicMock(free=10 * 1024 * 1024 * 1024)
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                await client.post(
+                    "/api/v1/jobs/synthesis", json=_body("Già normalizzato.")
+                )
+
+        app.state.preprocessing_service.preprocess.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Input validation
+# ---------------------------------------------------------------------------
+
+
+class TestInputValidation:
+    @pytest.mark.anyio
+    async def test_400_empty_text(self, test_app):
+        app, _, _ = test_app
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post("/api/v1/jobs/synthesis", json=_body(""))
         assert resp.status_code == 400
         assert "empty" in resp.json()["detail"].lower()
 
     @pytest.mark.anyio
-    async def test_400_whitespace_only_file(self, test_app):
+    async def test_400_whitespace_only_text(self, test_app):
         app, _, _ = test_app
-        with patch("local_tts.api.jobs.shutil.disk_usage") as mock_disk:
-            mock_disk.return_value = MagicMock(free=10 * 1024 * 1024 * 1024)
-            async with AsyncClient(
-                transport=ASGITransport(app=app), base_url="http://test"
-            ) as client:
-                resp = await client.post(
-                    "/api/v1/jobs/synthesis", files=_txt_file("   \n\t  ")
-                )
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/api/v1/jobs/synthesis", json=_body("   \n\t  ")
+            )
         assert resp.status_code == 400
         assert "empty" in resp.json()["detail"].lower()
 
     @pytest.mark.anyio
-    async def test_accepts_exactly_2mb_file(self, test_app):
+    async def test_422_missing_text_field(self, test_app):
         app, _, _ = test_app
-        content = "a" * (2 * 1024 * 1024)
-        with patch("local_tts.api.jobs.shutil.disk_usage") as mock_disk:
-            mock_disk.return_value = MagicMock(free=100 * 1024 * 1024 * 1024)
-            async with AsyncClient(
-                transport=ASGITransport(app=app), base_url="http://test"
-            ) as client:
-                resp = await client.post(
-                    "/api/v1/jobs/synthesis", files=_txt_file(content)
-                )
-        assert resp.status_code == 201
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/api/v1/jobs/synthesis", json={"source_filename": "book.txt"}
+            )
+        assert resp.status_code == 422
 
     @pytest.mark.anyio
-    async def test_accepts_case_insensitive_txt_extension(self, test_app):
+    async def test_422_missing_source_filename_field(self, test_app):
         app, _, _ = test_app
-        with patch("local_tts.api.jobs.shutil.disk_usage") as mock_disk:
-            mock_disk.return_value = MagicMock(free=10 * 1024 * 1024 * 1024)
-            async with AsyncClient(
-                transport=ASGITransport(app=app), base_url="http://test"
-            ) as client:
-                resp = await client.post(
-                    "/api/v1/jobs/synthesis",
-                    files={"file": ("BOOK.TXT", io.BytesIO(b"Hello"), "text/plain")},
-                )
-        assert resp.status_code == 201
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/api/v1/jobs/synthesis", json={"text": "Hello"}
+            )
+        assert resp.status_code == 422
+
+    @pytest.mark.anyio
+    async def test_empty_text_check_precedes_model_check(self, test_app):
+        """Validation runs before the model-loaded check (400, not 409)."""
+        app, _, mock_engine = test_app
+        mock_engine.loaded_model_id = None
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post("/api/v1/jobs/synthesis", json=_body(""))
+        assert resp.status_code == 400
 
 
 # ---------------------------------------------------------------------------
@@ -275,7 +281,7 @@ class TestModelLoadedCheck:
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             resp = await client.post(
-                "/api/v1/jobs/synthesis", files=_txt_file("Hello")
+                "/api/v1/jobs/synthesis", json=_body("Hello")
             )
         assert resp.status_code == 409
         assert "No model loaded" in resp.json()["detail"]
@@ -298,7 +304,7 @@ class TestDiskSpacePreflight:
             ) as client:
                 # 10,000 chars → estimated ~20 MB, available ~1 MB
                 resp = await client.post(
-                    "/api/v1/jobs/synthesis", files=_txt_file("x" * 10000)
+                    "/api/v1/jobs/synthesis", json=_body("x" * 10000)
                 )
 
         assert resp.status_code == 409
@@ -317,7 +323,7 @@ class TestDiskSpacePreflight:
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as client:
                 resp = await client.post(
-                    "/api/v1/jobs/synthesis", files=_txt_file("Hello world")
+                    "/api/v1/jobs/synthesis", json=_body("Hello world")
                 )
         assert resp.status_code == 201
 
@@ -330,9 +336,28 @@ class TestDiskSpacePreflight:
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as client:
                 await client.post(
-                    "/api/v1/jobs/synthesis", files=_txt_file("Hello")
+                    "/api/v1/jobs/synthesis", json=_body("Hello")
                 )
         mock_disk.assert_called_once_with(Path("/tmp/test-data"))
+
+    @pytest.mark.anyio
+    async def test_estimate_derived_from_text_length(self, test_app):
+        """Disk preflight scales the estimate with the confirmed text length."""
+        app, _, _ = test_app
+        # ~1.5 MB free; 10,000-char text estimates ~20 MB → fails.
+        with patch("local_tts.api.jobs.shutil.disk_usage") as mock_disk:
+            mock_disk.return_value = MagicMock(free=int(1.5 * 1024 * 1024))
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                long_resp = await client.post(
+                    "/api/v1/jobs/synthesis", json=_body("y" * 10000)
+                )
+                short_resp = await client.post(
+                    "/api/v1/jobs/synthesis", json=_body("short")
+                )
+        assert long_resp.status_code == 409
+        assert short_resp.status_code == 201
 
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,15 @@
 """Synthesis job API endpoints.
 
-Provides the REST endpoint for creating audiobook synthesis jobs
-(REQ-F-upload-text-file, REQ-F-disk-space-preflight).
+Provides the REST endpoint for creating audiobook synthesis jobs from the
+confirmed normalized text returned by ``POST /preprocess`` and approved by the
+user (REQ-F-synthesize-audiobook, REQ-USA-normalized-text-review,
+DEC-preprocess-review-flow).
+
+The ``.txt`` upload and all text normalization happen earlier at
+``POST /preprocess``; this endpoint receives the reviewed text as JSON and
+synthesizes **exactly** that text — it does **not** re-run the preprocessing
+pipeline. A disk-space preflight check (REQ-F-disk-space-preflight) derives its
+estimate from the text length before queuing the job.
 """
 
 from __future__ import annotations
@@ -9,7 +17,7 @@ from __future__ import annotations
 import logging
 import shutil
 
-from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from local_tts.services.job_service import JobService
@@ -18,14 +26,26 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/jobs")
 
-MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB (REQ-F-upload-text-file)
-
 # Heuristic for estimating output audio size from text length.
 # ~150 words/min at ~5 chars/word = 750 chars/min of audio.
 # MP3 at ~128 kbps ≈ 0.96 MB/min.
 # Factor: 0.96 / 750 ≈ 0.00128 MB per character.
 # Apply 1.5× safety margin → ~0.002 MB per character.
 _AUDIO_MB_PER_CHAR = 0.002
+
+
+class SynthesisJobRequest(BaseModel):
+    """Request body for ``POST /jobs/synthesis`` (confirmed normalized text).
+
+    The ``text`` is the exact normalized text the user reviewed and confirmed
+    after ``POST /preprocess`` (DEC-preprocess-review-flow); it is synthesized
+    as-is with no further preprocessing.
+    """
+
+    text: str
+    source_filename: str
+    voice: str | None = None
+    language: str | None = None
 
 
 class SynthesisJobResponse(BaseModel):
@@ -54,43 +74,21 @@ def _estimate_audio_mb(text_length: int) -> float:
 @router.post("/synthesis", status_code=201)
 async def create_synthesis_job(
     request: Request,
-    file: UploadFile,
-    voice: str | None = Form(default=None),
-    language: str | None = Form(default=None),
+    body: SynthesisJobRequest,
 ) -> SynthesisJobResponse:
-    """Upload a .txt file and start audiobook synthesis.
+    """Start audiobook synthesis from confirmed normalized text.
 
-    Validates file type and size (REQ-F-upload-text-file), checks that a model
-    is loaded, performs disk space preflight (REQ-F-disk-space-preflight), then
-    queues the job for background processing.
+    Receives the reviewed text as JSON (DEC-preprocess-review-flow), checks that
+    a model is loaded, performs a disk-space preflight derived from the text
+    length (REQ-F-disk-space-preflight), then queues the job for background
+    processing. The text is synthesized exactly as provided — preprocessing is
+    not re-run (REQ-USA-normalized-text-review).
     """
-    # --- File validation (REQ-F-upload-text-file) ---
+    # --- Input validation ---
 
-    filename = file.filename or ""
-    if not filename.lower().endswith(".txt"):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid file type: only .txt files are accepted",
-        )
-
-    content_bytes = await file.read()
-
-    if len(content_bytes) > MAX_FILE_SIZE_BYTES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File exceeds the 2 MB size limit ({len(content_bytes)} bytes)",
-        )
-
-    try:
-        text = content_bytes.decode("utf-8")
-    except UnicodeDecodeError:
-        raise HTTPException(
-            status_code=400,
-            detail="File is not valid UTF-8 encoded text",
-        )
-
+    text = body.text
     if not text.strip():
-        raise HTTPException(status_code=400, detail="File is empty")
+        raise HTTPException(status_code=400, detail="Text is empty")
 
     # --- Model loaded check ---
 
@@ -124,16 +122,16 @@ async def create_synthesis_job(
 
     job_service = _get_job_service(request)
     job = job_service.create_synthesis_job(
-        source_filename=filename,
+        source_filename=body.source_filename,
         text=text,
-        voice=voice,
-        language=language,
+        voice=body.voice,
+        language=body.language,
     )
 
     logger.info(
-        "Synthesis job %s created via API (file=%s, %d chars)",
+        "Synthesis job %s created via API (source=%s, %d chars)",
         job.id,
-        filename,
+        body.source_filename,
         len(text),
     )
 
