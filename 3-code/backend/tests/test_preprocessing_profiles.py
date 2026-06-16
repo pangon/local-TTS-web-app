@@ -70,6 +70,9 @@ class TestLanguageProfile:
         assert resolve_language_profile("xx").data == {}
 
     def test_registered_data_is_returned(self):
+        # Built-in stage data self-registers on import; start from a clean
+        # slate to test the resolver in isolation (fixture restores it).
+        pr._LANGUAGE_DATA.clear()
         register_language_data("it", {"numeric": {"1": "uno"}})
         assert resolve_language_profile("it").data == {"numeric": {"1": "uno"}}
 
@@ -80,6 +83,7 @@ class TestLanguageProfile:
         assert resolve_language_profile("en").data["mark"] == "EN"
 
     def test_contributions_merge(self):
+        pr._LANGUAGE_DATA.clear()
         register_language_data("it", {"numeric": {}})
         register_language_data("it", {"abbreviations": {}})
         data = resolve_language_profile("it").data
@@ -96,6 +100,9 @@ class TestModelProfile:
         )
 
     def test_default_profile_empty_when_no_stages_registered(self):
+        # Real stages self-register on package import, so explicitly establish
+        # the empty-registry precondition (the autouse fixture restores it).
+        st._STAGE_REGISTRY.clear()
         assert default_model_profile().stages == ()
 
     def test_default_profile_is_registered_subset_in_canonical_order(self):

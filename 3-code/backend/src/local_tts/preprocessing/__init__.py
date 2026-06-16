@@ -48,16 +48,23 @@ from local_tts.preprocessing.stages import (
     has_stage,
     register_stage,
 )
+from local_tts.preprocessing.unicode_sanitization import (
+    BUILTIN_LANGUAGE_DATA as _UNICODE_LANGUAGE_DATA,
+    UnicodeSanitizationStage,
+)
 
 # ---------------------------------------------------------------------------
 # Built-in stage registration
 # ---------------------------------------------------------------------------
-# Each stage-implementation task imports its stage class and registers it
-# here, e.g.:
-#     from local_tts.preprocessing.unicode_sanitization import UnicodeSanitizationStage
-#     register_stage(UnicodeSanitizationStage)
-# Until a stage is registered it is simply absent from the default pipeline,
-# so the system stays functional as stages are added incrementally.
+# Each stage-implementation task imports its stage class and registers it here,
+# plus any built-in language data the stage carries (merged per language so
+# stages never overwrite each other's namespaces).  Until a stage is registered
+# it is simply absent from the default pipeline, so the system stays functional
+# as stages are added incrementally.
+
+register_stage(UnicodeSanitizationStage)
+for _language, _data in _UNICODE_LANGUAGE_DATA.items():
+    register_language_data(_language, _data)
 
 __all__ = [
     "PreprocessingService",
@@ -74,6 +81,7 @@ __all__ = [
     "STAGE_LAYOUT_REPAIR",
     "STAGE_NUMERIC_SYMBOLIC_VERBALIZATION",
     "STAGE_ABBREVIATION_EXPANSION",
+    "UnicodeSanitizationStage",
     "register_stage",
     "get_stage",
     "has_stage",
