@@ -4,7 +4,9 @@
 
 Step-by-step instructions to build, run, and manually test the Local TTS Web App. This runbook is updated incrementally as new phases are completed.
 
-**Current coverage:** Phases 1-5 (Project Scaffolding, TTS Engine Foundation, Model Management End-to-End, Model Adapter Abstraction & Loaders [Phase 3.1], Audiobook Synthesis End-to-End, Library & Playback)
+**Current coverage:** Phases 1-5 (Project Scaffolding, TTS Engine Foundation, Model Management End-to-End, Model Adapter Abstraction & Loaders [Phase 3.1], Audiobook Synthesis End-to-End, Library & Playback) and Phase 5.1 (Text Preprocessing & Normalized-Text Review)
+
+> **API base path:** all REST and SSE endpoints are mounted under `/api/v1` (e.g. `http://127.0.0.1:8000/api/v1/preprocess`, SSE at `/api/v1/events`). The Phase 5.1 procedures below use the full `/api/v1/...` paths.
 
 ## Prerequisites
 
@@ -44,7 +46,7 @@ cd 3-code/backend
 pytest
 ```
 
-Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (file upload, validation, disk space check), library service (audiobook/chapter persistence and chapter audio path resolution), the library API (list/get/delete with cascade cleanup and chapter audio streaming with HTTP Range support), the playback position API (two-level GET/PUT bookmark, defaults, 404/422 handling), SSE event wiring for job progress/completed/failed, the model adapter registry/protocol (`has_adapter`/`get_adapter`, `loader_available` flag), and the Kokoro and Qwen3-TTS adapters.
+Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (now a JSON `{text, source_filename, voice?, language?}` contract — empty-text 400, no-model 409, disk preflight from text length, verbatim passthrough with no re-preprocessing), library service (audiobook/chapter persistence and chapter audio path resolution), the library API (list/get/delete with cascade cleanup and chapter audio streaming with HTTP Range support), the playback position API (two-level GET/PUT bookmark, defaults, 404/422 handling), SSE event wiring for job progress/completed/failed, the model adapter registry/protocol (`has_adapter`/`get_adapter`, `loader_available` flag), the Kokoro and Qwen3-TTS adapters, and the text-preprocessing pipeline — the pipeline skeleton (Stage protocol + registry, Pipeline runner, language/model profile resolution, domain-dictionary loader), the four concrete stages in isolation (Unicode sanitization, layout repair, numeric/symbolic verbalization, abbreviation expansion), and the `POST /preprocess` endpoint (file or text input, validation/no-model errors, before/after counts, latency-bound smoke guards).
 
 ### Frontend Tests
 
@@ -54,7 +56,7 @@ nvm use
 npm run test:unit
 ```
 
-Expected outcome: all tests pass. Tests cover Vue app rendering, router configuration, Vite proxy config, SSE client composable, model API service, ModelsView component, jobs API service (synthesis job creation, error handling), CreateView component (file validation, progress display, SSE event handling, form reset), the audiobooks API service (list/get/delete, chapter audio URL helper), the playback API service (get/save position, with the `keepalive` flag for unload saves), LibraryView component (listing with total chapter duration, empty state, inline delete confirmation, error handling), and PlaybackView component (chapter navigation, resume seek, TTS model and per-chapter file-size display, and bookmark persistence on pause/chapter-change, every 20 seconds while playing, and on page navigation/reload/close).
+Expected outcome: all tests pass. Tests cover Vue app rendering, router configuration, Vite proxy config, SSE client composable, model API service, ModelsView component, the preprocess API service (`preprocessFile`, multipart upload, 400/409 handling), the jobs API service (JSON synthesis-job creation, disk-space error fields, error handling), CreateView component (the two-step preprocess-then-confirm flow: file validation, "Preprocess & Review" busy state, normalized-text review textarea with before/after char counts, "Confirm & Start Synthesis" sending the exact reviewed text, progress display, SSE event handling, form reset), the audiobooks API service (list/get/delete, chapter audio URL helper), the playback API service (get/save position, with the `keepalive` flag for unload saves), LibraryView component (listing with total chapter duration, empty state, inline delete confirmation, error handling), and PlaybackView component (chapter navigation, resume seek, TTS model and per-chapter file-size display, and bookmark persistence on pause/chapter-change, every 20 seconds while playing, and on page navigation/reload/close).
 
 ### Frontend Type Check
 
@@ -119,7 +121,7 @@ Expected outcome: FastAPI serves the Vue static build at `http://127.0.0.1:8000`
 
 1. Start the backend (see above).
 2. Verify the console prints the startup URL with `127.0.0.1`.
-3. Open `http://127.0.0.1:8000/api/sse` in a browser — should establish an SSE connection (event stream content type).
+3. Open `http://127.0.0.1:8000/api/v1/events` in a browser — should establish an SSE connection (event stream content type).
 4. Verify the app is NOT accessible from other machines on the network (bound to localhost only).
 
 Expected outcome: backend runs, bound to localhost.
@@ -177,7 +179,7 @@ Expected outcome: ffmpeg availability is validated and reported at startup.
 1. Start the backend.
 2. Open the frontend (dev or production mode).
 3. Open browser DevTools Network tab, filter by EventSource/SSE.
-4. Verify an SSE connection is established to `/api/sse`.
+4. Verify an SSE connection is established to `/api/v1/events`.
 5. Verify keepalive events arrive periodically.
 
 Expected outcome: SSE connection established with keepalive heartbeat.
@@ -215,7 +217,7 @@ Phase 3.1 introduces the model adapter layer: each model in the compatible list 
 #### 3.1.1 `loader_available` exposed by the API
 
 1. Start the backend.
-2. Request the model list: `curl http://127.0.0.1:8000/api/models`.
+2. Request the model list: `curl http://127.0.0.1:8000/api/v1/models`.
 3. Verify each entry includes a `loader_available` boolean field.
 4. Verify `loader_available` is `true` for `hexgrad/Kokoro-82M` and `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`, and `false` for models without an adapter (e.g. `coqui/XTTS-v2`, `ResembleAI/chatterbox`).
 
@@ -364,7 +366,7 @@ Expected outcome: disk space is checked before synthesis begins; clear error sho
 1. Open the app — it opens on the Library view (`/`), also reachable via the "Library" nav link.
 2. Verify each generated audiobook is listed with its title, creation date/time (localized), chapter count (e.g. "3 chapters", or "1 chapter" for a single-chapter book), and the total duration of its chapters (e.g. "1h 02m", "2m 05s").
 3. Verify an audiobook whose chapters have no recorded duration shows no duration segment (the chapter count is the last item on the meta line).
-4. Cross-check against the API: `curl http://127.0.0.1:8000/api/audiobooks` returns a JSON array; each entry includes `id`, `title`, `source_filename`, `model_id`, `voice`, `language`, `created_at`, `chapter_count`, and `total_duration_seconds` (the summed chapter duration, or `null` when no chapter has a recorded duration).
+4. Cross-check against the API: `curl http://127.0.0.1:8000/api/v1/audiobooks` returns a JSON array; each entry includes `id`, `title`, `source_filename`, `model_id`, `voice`, `language`, `created_at`, `chapter_count`, and `total_duration_seconds` (the summed chapter duration, or `null` when no chapter has a recorded duration).
 
 Expected outcome: all audiobooks are listed with title, date, chapter count, and total duration (REQ-F-library-listing).
 
@@ -390,7 +392,7 @@ Expected outcome: the playback view loads the selected audiobook with an audio p
 
 1. With the playback view open, press play on the audio control and verify intelligible speech plays.
 2. Seek within the track (drag the progress bar) and verify playback jumps without re-downloading from the start.
-3. Inspect the request: `curl -s -D - -o /dev/null -H "Range: bytes=0-1023" http://127.0.0.1:8000/api/audiobooks/<id>/chapters/1/audio`.
+3. Inspect the request: `curl -s -D - -o /dev/null -H "Range: bytes=0-1023" http://127.0.0.1:8000/api/v1/audiobooks/<id>/chapters/1/audio`.
 4. Verify the response status is `206 Partial Content`, with `Content-Range`, `Accept-Ranges: bytes`, and `Content-Type: audio/mpeg` headers, and **no** `Content-Disposition: attachment` header (audio is served inline).
 5. Verify an out-of-range request (`Range: bytes=99999999-`) returns `416 Range Not Satisfiable`.
 
@@ -405,14 +407,14 @@ Expected outcome: chapter audio is streamed inline and honours HTTP Range reques
 5. Click "Next ›" — verify the player loads the next chapter, the "now playing" title updates, and the active chapter in the list is highlighted.
 6. Click a chapter directly in the list — verify playback switches to that chapter.
 7. Open a single-chapter audiobook and verify the navigation bar and chapter list are **not** shown (the single chapter's file size still appears next to the "now playing" title, per test 5.3).
-8. Cross-check against the API: `curl http://127.0.0.1:8000/api/audiobooks/<id>` returns the `model_id` and a `chapters` array where each entry includes `chapter_number`, `title`, `duration_seconds`, and `file_size_bytes` (the on-disk MP3 size, or `null` when the file is missing).
+8. Cross-check against the API: `curl http://127.0.0.1:8000/api/v1/audiobooks/<id>` returns the `model_id` and a `chapters` array where each entry includes `chapter_number`, `title`, `duration_seconds`, and `file_size_bytes` (the on-disk MP3 size, or `null` when the file is missing).
 
 Expected outcome: chapters can be navigated via buttons and the chapter list, each showing its file size; navigation is hidden for single-chapter books.
 
 #### 5.6 Playback resume (two-level bookmark)
 
 1. Open a multi-chapter audiobook, play chapter 2 for a few seconds, then pause (or navigate to another chapter, or leave the view).
-2. Verify the position is saved: `curl http://127.0.0.1:8000/api/audiobooks/<id>/position` returns `last_chapter_number` equal to the chapter you were on and a `chapters` object mapping chapter numbers (as strings) to saved second offsets.
+2. Verify the position is saved: `curl http://127.0.0.1:8000/api/v1/audiobooks/<id>/position` returns `last_chapter_number` equal to the chapter you were on and a `chapters` object mapping chapter numbers (as strings) to saved second offsets.
 3. Navigate away (back to Library) and reopen the same audiobook.
 4. Verify it reopens on the last active chapter, and once the audio metadata loads, the player seeks to the saved timestamp within that chapter.
 5. For a never-played audiobook, verify `GET …/position` returns `{"last_chapter_number": 1, "chapters": {}}` and the view starts at the first chapter at 0:00.
@@ -431,7 +433,7 @@ Expected outcome: playback resumes from the last chapter and per-chapter timesta
 2. Verify an inline confirmation appears in that row: `Delete "<title>"?` with "Confirm" and "Cancel" buttons.
 3. Click "Cancel" — verify the row returns to its normal state and nothing is deleted.
 4. Click "Delete" again, then "Confirm" — verify the button shows "Deleting…" briefly and the row disappears from the list.
-5. Verify the records are gone: the audiobook no longer appears in `GET /api/audiobooks`, and `GET /api/audiobooks/<id>` returns `404`.
+5. Verify the records are gone: the audiobook no longer appears in `GET /api/v1/audiobooks`, and `GET /api/v1/audiobooks/<id>` returns `404`.
 6. Verify cascade cleanup: the chapter rows are removed and the audio files under `data/audiobooks/<id>/` are deleted from disk.
 
 Expected outcome: deletion requires confirmation and cascades to chapter records and audio files (REQ-F-delete-audiobook).
@@ -442,6 +444,178 @@ Expected outcome: deletion requires confirmation and cascades to chapter records
 2. Verify the backend returns `404` and the UI shows an error message ("Failed to delete audiobook") without crashing.
 
 Expected outcome: failed deletions surface a clear error and leave the UI usable.
+
+### Phase 5.1: Text Preprocessing & Normalized-Text Review
+
+Phase 5.1 inserts a **preprocess-then-confirm** step into audiobook creation (`DEC-preprocess-review-flow`). Raw input is normalized by a modular, CPU-only pipeline (`DEC-text-preprocessing-pipeline`) of four stages — Unicode sanitization → layout repair → numeric/symbolic verbalization → abbreviation expansion — and the user reviews (and may edit) the normalized text before any GPU time is spent. Synthesis then reads **exactly** the confirmed text, with no second normalization pass.
+
+The pipeline applies the **currently loaded model's** profile and defaults to the Italian language profile (`it`, per `DEC-default-italian-language`). Verbalization examples below assume the Italian default.
+
+**Prerequisite:** a TTS model must be downloaded **and loaded** (Phase 3 tests). `POST /preprocess` and `POST /jobs/synthesis` both return `409` when no model is loaded.
+
+#### 5.1.1 `POST /preprocess` with an uploaded file
+
+1. Create a small UTF-8 `.txt` file, e.g. `printf 'Il costo è 1.234,56 €.\n' > sample.txt`.
+2. Call the endpoint:
+   `curl -s -F "file=@sample.txt" http://127.0.0.1:8000/api/v1/preprocess`
+3. Verify the JSON response contains `normalized_text`, `language` (`"it"` by default), `model_id` (the loaded model), `original_char_count`, and `normalized_char_count`.
+4. Verify `normalized_text` is the cleaned/verbalized text (e.g. the amount is spelled out in Italian words), not the raw input.
+
+Expected outcome: the endpoint returns the normalized, TTS-ready text plus before/after character counts (REQ-USA-normalized-text-review, REQ-F-upload-text-file).
+
+#### 5.1.2 `POST /preprocess` with raw text
+
+1. Call with the `text` form field instead of a file:
+   `curl -s -F "text=Pagina 3 di 10" -F "language=it" http://127.0.0.1:8000/api/v1/preprocess`
+2. Verify the response shape matches 5.1.1 and `language` echoes the requested `it`.
+
+Expected outcome: raw text is accepted (the preview path) and normalized with the same contract as the file path.
+
+#### 5.1.3 Input validation and "no model loaded"
+
+With a model loaded, verify each of the following returns `400` with a clear `detail`:
+
+1. Non-`.txt` upload: `curl -s -o /dev/null -w "%{http_code}\n" -F "file=@image.png" http://127.0.0.1:8000/api/v1/preprocess` → `400` ("only .txt files are accepted").
+2. File over 2 MB → `400` (size limit, reports byte count).
+3. Non-UTF-8 file → `400` ("not valid UTF-8").
+4. Empty / whitespace-only input (file or `text`) → `400`.
+5. Both `file` **and** `text` provided → `400` ("exactly one of 'file' or 'text'").
+6. Neither `file` nor `text` provided → `400`.
+
+Then unload the model (or restart the backend without loading one) and repeat 5.1.1:
+
+7. Verify the response is `409` with `detail` `"No model loaded"`. (Input validation runs **before** the model check, matching `POST /jobs/synthesis`.)
+
+Expected outcome: malformed input is rejected with 400 before synthesis; preprocessing is refused with 409 when no model is loaded.
+
+#### 5.1.4 Unicode sanitization stage (REQ-F-text-unicode-sanitization)
+
+1. Build an input mixing artifacts (a non-breaking space, a zero-width character, smart quotes, an em-dash variant, and an emoji), e.g. in Python:
+   `python -c "open('uni.txt','w').write('Ciao mondo “virgolette” — trattino \U0001F600 zero​width')"`
+2. Preprocess `uni.txt` (5.1.1) and inspect `normalized_text`.
+3. Verify: the NBSP and zero-width character are gone (NBSP → normal space), smart/curly quotes and the em-dash are normalized to plain forms, and the emoji is either removed or verbalized per the model profile (the built-in Italian table names common emoji; otherwise a Unicode-name fallback is used).
+
+Expected outcome: invisible/control characters, NBSP/whitespace variants, dash/quote variants, and emoji are normalized or removed.
+
+#### 5.1.5 Layout repair stage (REQ-F-text-layout-repair)
+
+1. Build an input that mimics PDF-to-text breakage:
+   ```
+   Questo è un para-
+   grafo spezzato su più
+   righe dal layout.
+
+   12
+
+   CAPITOLO 2
+   Inizio del secondo capitolo.
+   ```
+   (a word hyphenated across a line break, a sentence wrapped mid-line, an isolated page number `12`, a blank-line paragraph boundary, and a chapter heading).
+2. Preprocess it and inspect `normalized_text`.
+3. Verify: `para-\ngrafo` is de-hyphenated to `paragrafo`; the wrapped sentence is reflowed onto one line; the isolated `12` page number is stripped; the blank-line paragraph boundary is preserved; and `CAPITOLO 2` remains on its own physical line.
+4. **Chapter boundaries survive:** run the normalized text through synthesis (5.1.10) and confirm the resulting audiobook still splits into the expected chapters (layout repair runs before chapter detection and must not defeat it).
+
+Expected outcome: end-of-line hyphenation is resolved, spurious wraps are reflowed, isolated page numbers are stripped, and paragraph/chapter boundaries are preserved so chapter detection still functions.
+
+#### 5.1.6 Numeric & symbolic verbalization stage (Italian) (REQ-F-text-numeric-symbolic-verbalization)
+
+Preprocess `text` inputs and verify each verbalizes into Italian words (defaults assume `language=it`):
+
+1. Date: `15/03/2026` → "quindici marzo duemilaventisei" (day 1 becomes the ordinal "primo"; out-of-range day/month are left as plain numbers).
+2. Currency: `0,99 €` → "novantanove centesimi"; `1 €` → "un euro" (elided singular).
+3. Percent: `25%` → "venticinque per cento"; per-mille `‰` similarly.
+4. Temperature: `20°C` → "venti gradi Celsius".
+5. Ordinal indicator: `1°` → "primo", `2ª` → "seconda".
+6. Cardinal/decimal honouring Italian separators: `1.234,56` → "milleduecentotrentaquattro virgola cinque sei".
+7. Standalone symbols: `&` → "e", `+` → "più", `=` → "uguale".
+
+Expected outcome: numbers, dates, percentages, currency, temperatures, ordinals, and symbols are verbalized into language-appropriate words.
+
+#### 5.1.7 Abbreviation expansion + optional domain dictionary (REQ-F-abbreviation-expansion)
+
+1. Built-in Italian set: preprocess `text=Mele, pere, ecc.` → "…eccetera"; `text=il sig. Rossi` → "il signor Rossi" (the trailing period is consumed only at end of text/line, so honorifics followed by a name survive).
+2. Domain dictionary (off by default): copy the example to activate it —
+   `cp 3-code/backend/config/preprocessing/domain_dictionary.example.json 3-code/backend/config/preprocessing/domain_dictionary.json`
+   then **restart the backend** and preprocess `text=Uso di AI e USB.` → the acronyms expand to their configured spoken forms (e.g. "intelligenza artificiale", "u esse bi"). Matching is whole-token and case-sensitive by default, so `AI` ≠ a lowercase `ai`.
+3. Absence is safe: remove `domain_dictionary.json` (or supply malformed JSON), restart, and verify preprocessing still works using only the built-in set (a warning may be logged; no error).
+
+Expected outcome: common abbreviations/acronyms are verbalized from the built-in language set, an optional on-disk domain dictionary is applied when present, and its absence never breaks preprocessing.
+
+> The override location for the dictionary is the `LOCAL_TTS_PREPROCESSING_CONFIG_DIR` environment variable; see `3-code/backend/config/preprocessing/README.md`.
+
+#### 5.1.8 Per-language and per-model configuration (REQ-MNT-preprocessing-pipeline)
+
+1. **Per-language:** preprocess the same numeric input twice — once with `language=it` (default) and once with `language=en` — and verify the verbalization differs (e.g. "milleduecentotrentaquattro" vs the English spelling), confirming the language profile (and its `num2words` language) is selected by the request.
+2. **Unknown language:** preprocess with `language=xx` (no registered data) and verify the numeric/abbreviation stages pass the text through unchanged (full no-op) rather than erroring.
+3. **Per-model:** the pipeline reads the loaded model's profile (keyed by `model_id`, default fallback). With only the default profile registered, all four stages run for every model; switching the loaded model does not change the registered stage logic — only which profile is resolved.
+
+Expected outcome: the pipeline is configurable per output language and per TTS model; language data is selected by the request and missing data degrades to a no-op, not an error.
+
+#### 5.1.9 Latency bound (REQ-PERF-preprocessing-overhead)
+
+1. Short input (≤500 chars): time a `POST /preprocess` call (e.g. `curl -s -o /dev/null -w "%{time_total}\n" -F "text=$(head -c 400 sample.txt)" http://127.0.0.1:8000/api/v1/preprocess`) and verify it completes well under ~1 s.
+2. Large input (~2 MB `.txt`): preprocess it and verify it completes within ~10 s on min-spec hardware.
+
+Expected outcome: synchronous preprocessing stays within the bounded latency targets (≤1 s for a ≤500-char preview, ≤10 s for a ~2 MB document).
+
+#### 5.1.10 Creation-view review flow (UI) (REQ-USA-normalized-text-review)
+
+1. Open the app, go to **Create**. Select a valid `.txt` file (the `.txt`/2 MB client-side checks from Phase 4 test 4.2 still apply).
+2. Verify a **"Preprocess & Review"** button is shown (not "Start Synthesis"). Click it.
+3. Verify a busy state appears ("Preprocessing…" button label and a "Normalizing text…" message) during the synchronous call.
+4. On success, verify a **"Review normalized text"** section appears with:
+   - a hint explaining this is exactly what will be read aloud,
+   - a character-count line "`<original>` → `<normalized>` characters after normalization",
+   - an **editable** textarea pre-filled with the normalized text,
+   - a **"Confirm & Start Synthesis"** button and a **"Start Over"** button.
+5. Verify synthesis does **not** auto-start — nothing is generated until "Confirm & Start Synthesis" is clicked.
+6. Click "Confirm & Start Synthesis" and verify the job runs with progress exactly as in Phase 4 tests 4.4–4.5 (the progress/SSE/success behavior is unchanged).
+7. Click "Start Over" (before confirming) and verify the review resets back to file selection.
+
+Expected outcome: the user reviews — and may edit — the normalized text and must explicitly confirm before generation begins.
+
+#### 5.1.11 Exact-text guarantee — no re-preprocessing (DEC-preprocess-review-flow)
+
+1. In the review textarea (5.1.10), **edit** the normalized text — e.g. add a distinctive sentence or change a number — then click "Confirm & Start Synthesis".
+2. After completion, open the audiobook (Phase 5 playback) and confirm the audio reflects the **edited** text verbatim, with no further normalization applied on top of your edit (e.g. a number you typed as digits is read as digits if you left it that way).
+3. Confirm in DevTools that the `POST /api/v1/jobs/synthesis` request body carries the exact reviewed `text` and the `language` resolved by `/preprocess` (both calls must agree on `language`).
+
+Expected outcome: synthesis uses exactly the confirmed text; the preprocessing pipeline is not re-run inside `/jobs/synthesis`.
+
+#### 5.1.12 GOAL-text-normalization criterion 6 — subjective naturalness on a messy PDF-style input
+
+This step subjectively assesses success criterion 6 ("audio generated from normalized text is measurably more natural than audio from raw text on representative messy inputs").
+
+1. Save the following representative PDF-extraction-style sample as `messy.txt`:
+   ```
+   INTRODUZIONE
+
+
+   Nel 2026 il fat-
+   turato è cresciuto del 12,5% rispetto
+   ai 3.400.000 € dell'anno prec.
+
+   Pag. 1
+
+
+   Il sig. Rossi ha dichiarato:  “Investiremo
+   il   25%   delle   risorse”   😀   entro il 1°
+   trimestre, ecc.
+
+   12
+
+   CAPITOLO 1
+
+   Risultati
+   ```
+   (broken hyphenation, mid-sentence wraps, page-number lines, irregular spacing, smart quotes, an emoji, a percentage, currency, an ordinal, an abbreviation, and a chapter heading.)
+2. **Baseline (raw):** to hear the un-normalized result, synthesize the raw text directly — call `POST /api/v1/jobs/synthesis` with the raw file contents as `text` (bypassing `/preprocess`):
+   `curl -s -X POST -H "Content-Type: application/json" -d "$(python -c "import json,sys;print(json.dumps({'text':open('messy.txt').read(),'source_filename':'messy-raw.txt'}))")" http://127.0.0.1:8000/api/v1/jobs/synthesis`
+   Play the resulting audiobook and note artifacts: digits/percent/currency read awkwardly or in English, "Pag. 1" and the stray "12" read aloud, the broken word "fat- turato", and the emoji mis-read or skipped.
+3. **Normalized:** run `messy.txt` through the Create view (5.1.10) — preprocess, review, confirm — and play that audiobook.
+4. **Compare:** subjectively confirm the normalized audio is clearly more natural — numbers/date/percent/currency/ordinal are spoken as Italian words, the abbreviation is expanded, page numbers are not read, the broken word is rejoined, the emoji is removed/verbalized, and sentences flow without mid-line breaks. Verify chapter detection still produced a "CAPITOLO 1" chapter.
+
+Expected outcome: a reviewer can hear that normalized-text audio is measurably more natural than raw-text audio on a representative messy input (GOAL-text-normalization criterion 6). This is a subjective, qualitative check; record observations rather than a pass/fail metric.
 
 ## Rollback
 
@@ -467,8 +641,15 @@ Not applicable — manual testing does not modify production state. If the appli
 | Model shows "No adapter" badge with no Download/Load buttons | Expected: no adapter is registered yet for that model. Use an adapter-backed model (Kokoro-82M or Qwen3-TTS), or implement the corresponding `TASK-loader-*` adapter |
 | `loader_available` is `false` for a model you expect to work | Confirm the adapter is registered in `_ADAPTER_REGISTRY` (`src/local_tts/tts/adapters/__init__.py`); restart the backend after registering |
 | Kokoro produces garbled or English-only audio for non-English text | Ensure `espeak-ng` is installed and on PATH (`sudo apt-get install espeak-ng`) |
-| Library view is empty after a successful synthesis | Confirm the job completed (Phase 4 test 4.5) and `GET /api/audiobooks` returns the entry; check the data directory (`LOCAL_TTS_DATA_DIR`) matches between synthesis and the running backend |
-| Audio player shows controls but won't play / 404 on the audio URL | Verify the chapter audio file exists under `data/audiobooks/<id>/`; check `GET /api/audiobooks/<id>/chapters/<n>/audio` returns 200/206, not 404 |
+| Library view is empty after a successful synthesis | Confirm the job completed (Phase 4 test 4.5) and `GET /api/v1/audiobooks` returns the entry; check the data directory (`LOCAL_TTS_DATA_DIR`) matches between synthesis and the running backend |
+| Audio player shows controls but won't play / 404 on the audio URL | Verify the chapter audio file exists under `data/audiobooks/<id>/`; check `GET /api/v1/audiobooks/<id>/chapters/<n>/audio` returns 200/206, not 404 |
 | Seeking restarts the track from the beginning | Confirm the audio endpoint returns `206` with `Accept-Ranges: bytes` (test 5.4); a proxy stripping Range headers can force full re-download |
-| Playback does not resume at the saved position | The bookmark is best-effort and saved on pause/end/chapter-change/unmount, every 20 seconds while playing, and on page navigation/reload/close (the last via a `keepalive` request); ensure `PUT /api/audiobooks/<id>/position` succeeds and that the saved chapter still exists. The seek is applied on `loadedmetadata`, so a missing/short audio file will not seek |
-| Deleted audiobook still shows in the library | Refresh the Library view; if it persists, confirm `DELETE /api/audiobooks/<id>` returned 204 and check backend logs for file-cleanup errors |
+| Playback does not resume at the saved position | The bookmark is best-effort and saved on pause/end/chapter-change/unmount, every 20 seconds while playing, and on page navigation/reload/close (the last via a `keepalive` request); ensure `PUT /api/v1/audiobooks/<id>/position` succeeds and that the saved chapter still exists. The seek is applied on `loadedmetadata`, so a missing/short audio file will not seek |
+| Deleted audiobook still shows in the library | Refresh the Library view; if it persists, confirm `DELETE /api/v1/audiobooks/<id>` returned 204 and check backend logs for file-cleanup errors |
+| `409 No model loaded` from `POST /api/v1/preprocess` | Preprocessing applies the loaded model's profile — load a model first on the Models page (Phase 3) |
+| `/preprocess` returns the raw text unchanged | Confirm the request `language` has registered data (default `it`); an unknown language makes the numeric/abbreviation stages a no-op (test 5.1.8). Also confirm the four stages self-registered (they register at import via `preprocessing/__init__.py`) |
+| Domain-dictionary acronyms not expanded | Ensure `config/preprocessing/domain_dictionary.json` exists (copy from `domain_dictionary.example.json`) and **restart the backend**; matching is whole-token and case-sensitive by default. A malformed file is ignored with a logged warning (built-in set still applies) |
+| Numbers/dates spoken in the wrong language | Pass the intended `language` to `/preprocess`; the same resolved `language` must be forwarded to `/jobs/synthesis` (the Create view does this automatically) |
+| Chapter detection broke after preprocessing | Layout repair preserves blank-line paragraph boundaries and keeps heading/list lines standalone; verify the input's chapter headings (e.g. `CAPITOLO N`) are on their own line and separated by blank lines (test 5.1.5) |
+| Audio doesn't match the reviewed text | `/jobs/synthesis` synthesizes the exact `text` it receives with no re-preprocessing; confirm the request body carries the reviewed text and that you clicked "Confirm & Start Synthesis" after editing (tests 5.1.10–5.1.11) |
+| `/preprocess` slower than expected | Check the input size against the bounds (≤1 s for ≤500 chars, ≤10 s for ~2 MB, test 5.1.9); very large inputs above 2 MB are rejected with 400 |

@@ -7,7 +7,8 @@
 ## Interfaces
 
 - HTTP REST with backend: sends API requests for all user actions (CRUD, job creation, model management)
-- SSE with backend: receives real-time progress and status events via `EventSource` API
+- SSE with backend: receives real-time progress and status events via `EventSource` API (`/api/v1/events`)
+- Audiobook creation review flow (`views/CreateView.vue`, `api/preprocess.ts`, `api/jobs.ts`): a two-step preprocess-then-confirm flow (`DEC-preprocess-review-flow`). Step 1 uploads the selected `.txt` to `POST /api/v1/preprocess` (`preprocessFile`, multipart) and presents the returned normalized text in an **editable** review textarea with before/after char counts; step 2 sends the confirmed text to `POST /api/v1/jobs/synthesis` as JSON (`createSynthesisJob`), forwarding the `language` resolved by `/preprocess` so both calls agree. Synthesis never auto-starts — it requires an explicit "Confirm & Start Synthesis" action (`REQ-USA-normalized-text-review`). The voice/language selector itself is deferred to Phase 6.
 - Audio playback (`views/PlaybackView.vue`): uses the native `<audio>` element pointed at the chapter audio URL; chapter navigation is index-based over the sorted chapter list, and the two-level resume bookmark is read on load (seeking on `loadedmetadata`) and persisted best-effort via the playback API service (`api/playback.ts`) on pause/end/chapter-change/unmount, periodically every 20 seconds while playing, and on page navigation/reload/close (`pagehide`/`visibilitychange`, using a `keepalive` fetch so the save survives document teardown).
 
 ## Requirements Addressed
