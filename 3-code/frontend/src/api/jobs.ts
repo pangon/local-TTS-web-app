@@ -1,5 +1,14 @@
 /** API client for synthesis job endpoints. */
 
+export interface SynthesisJobRequest {
+  /** Confirmed normalized text to synthesize exactly as-is (no re-preprocessing). */
+  text: string
+  /** Original uploaded filename, used to derive the audiobook title. */
+  source_filename: string
+  voice?: string
+  language?: string
+}
+
 export interface SynthesisJobResponse {
   id: string
   type: 'synthesis'
@@ -15,31 +24,30 @@ export interface InsufficientDiskSpaceDetail {
 }
 
 /**
- * Creates a synthesis job by uploading a .txt file.
+ * Creates a synthesis job from confirmed normalized text.
  *
- * POST /api/v1/jobs/synthesis (multipart/form-data)
+ * POST /api/v1/jobs/synthesis (application/json)
  *
- * @throws Error with message for 400 (validation) or 409 (no model / disk space).
- *   Disk-space errors carry `estimated_mb` and `available_mb` properties.
+ * The text is the exact normalized text the user reviewed and confirmed after
+ * `POST /preprocess` (DEC-preprocess-review-flow); the backend synthesizes it
+ * as-is without re-running the preprocessing pipeline.
+ *
+ * @throws Error with message for 400 (empty text) or 409 (no model / disk
+ *   space). Disk-space errors carry `estimated_mb` and `available_mb`
+ *   properties.
  */
 export async function createSynthesisJob(
-  file: File,
-  voice?: string,
-  language?: string,
+  req: SynthesisJobRequest,
 ): Promise<SynthesisJobResponse> {
-  const form = new FormData()
-  form.append('file', file)
-  if (voice) form.append('voice', voice)
-  if (language) form.append('language', language)
-
   const res = await fetch('/api/v1/jobs/synthesis', {
     method: 'POST',
-    body: form,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
   })
 
   if (res.status === 400) {
     const body = await res.json()
-    throw new Error(typeof body.detail === 'string' ? body.detail : 'Invalid file')
+    throw new Error(typeof body.detail === 'string' ? body.detail : 'Invalid request')
   }
 
   if (res.status === 409) {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { preprocessFile } from '@/api/preprocess'
 import { createSynthesisJob } from '@/api/jobs'
 import {
   useSSE,
@@ -12,6 +13,22 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2 MB
 
 const selectedFile = ref<File | null>(null)
 const fileError = ref<string | null>(null)
+
+// Optional output language. No selector yet (added by TASK-voice-language-selection-ui,
+// Phase 6); kept here so the same language flows to both /preprocess and /jobs/synthesis.
+const selectedLanguage = ref<string | undefined>(undefined)
+
+// --- Step 1: preprocess & review (DEC-preprocess-review-flow) ---
+const preprocessing = ref(false)
+const preprocessError = ref<string | null>(null)
+/** The normalized text under review. `null` means no review is active yet. */
+const normalizedText = ref<string | null>(null)
+const originalCharCount = ref(0)
+const normalizedCharCount = ref(0)
+/** Language resolved by /preprocess; forwarded verbatim to /jobs/synthesis. */
+const resolvedLanguage = ref<string | undefined>(undefined)
+
+// --- Step 2: synthesis ---
 const submitting = ref(false)
 const submitError = ref<string | null>(null)
 
@@ -22,24 +39,48 @@ const jobProgress = ref(0)
 const jobError = ref<string | null>(null)
 const jobCompleted = ref(false)
 
-const canSubmit = computed(
-  () => selectedFile.value !== null && !fileError.value && !submitting.value && !activeJobId.value,
+const inReview = computed(() => normalizedText.value !== null)
+
+const canPreprocess = computed(
+  () =>
+    selectedFile.value !== null &&
+    !fileError.value &&
+    !preprocessing.value &&
+    !inReview.value &&
+    !activeJobId.value,
+)
+
+const canSynthesize = computed(
+  () =>
+    inReview.value &&
+    (normalizedText.value?.trim().length ?? 0) > 0 &&
+    !submitting.value &&
+    !activeJobId.value,
 )
 
 const { on, off } = useSSE()
 
-function onFileChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0] ?? null
-
-  // Reset state
-  fileError.value = null
+function resetReviewAndJob() {
+  preprocessError.value = null
+  normalizedText.value = null
+  originalCharCount.value = 0
+  normalizedCharCount.value = 0
+  resolvedLanguage.value = undefined
   submitError.value = null
   jobError.value = null
   jobCompleted.value = false
   activeJobId.value = null
   jobStatus.value = null
   jobProgress.value = 0
+}
+
+function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+
+  // Reset all downstream state when the input changes.
+  fileError.value = null
+  resetReviewAndJob()
 
   if (!file) {
     selectedFile.value = null
@@ -61,8 +102,30 @@ function onFileChange(event: Event) {
   selectedFile.value = file
 }
 
-async function submitJob() {
+/** Step 1: normalize the uploaded file and enter the review step. */
+async function preprocess() {
   if (!selectedFile.value) return
+
+  preprocessing.value = true
+  preprocessError.value = null
+
+  try {
+    const result = await preprocessFile(selectedFile.value, selectedLanguage.value)
+    normalizedText.value = result.normalized_text
+    originalCharCount.value = result.original_char_count
+    normalizedCharCount.value = result.normalized_char_count
+    // Forward the resolved language to synthesis so both calls agree.
+    resolvedLanguage.value = result.language
+  } catch (e) {
+    preprocessError.value = (e as Error).message || 'Failed to preprocess text'
+  } finally {
+    preprocessing.value = false
+  }
+}
+
+/** Step 2: synthesize exactly the reviewed text (no re-preprocessing). */
+async function submitJob() {
+  if (!canSynthesize.value || normalizedText.value === null || !selectedFile.value) return
 
   submitting.value = true
   submitError.value = null
@@ -70,7 +133,11 @@ async function submitJob() {
   jobCompleted.value = false
 
   try {
-    const job = await createSynthesisJob(selectedFile.value)
+    const job = await createSynthesisJob({
+      text: normalizedText.value,
+      source_filename: selectedFile.value.name,
+      language: resolvedLanguage.value,
+    })
     activeJobId.value = job.id
     jobStatus.value = job.status
     jobProgress.value = job.progress
@@ -108,12 +175,7 @@ function onJobFailed(data: JobFailedEvent) {
 function resetForm() {
   selectedFile.value = null
   fileError.value = null
-  submitError.value = null
-  activeJobId.value = null
-  jobStatus.value = null
-  jobProgress.value = 0
-  jobError.value = null
-  jobCompleted.value = false
+  resetReviewAndJob()
 
   // Clear the file input
   const input = document.querySelector('.create-view input[type="file"]') as HTMLInputElement | null
@@ -145,7 +207,7 @@ onUnmounted(() => {
         id="file-input"
         type="file"
         accept=".txt"
-        :disabled="!!activeJobId"
+        :disabled="preprocessing || inReview || !!activeJobId"
         @change="onFileChange"
       />
       <p v-if="fileError" class="error">{{ fileError }}</p>
@@ -156,24 +218,48 @@ onUnmounted(() => {
       <span class="file-size">({{ (selectedFile.size / 1024).toFixed(1) }} KB)</span>
     </div>
 
-    <div class="actions">
-      <button
-        :disabled="!canSubmit"
-        @click="submitJob"
-      >
-        {{ submitting ? 'Submitting...' : 'Start Synthesis' }}
-      </button>
-
-      <button
-        v-if="jobCompleted || jobError"
-        class="btn-secondary"
-        @click="resetForm"
-      >
-        New Audiobook
+    <!-- Step 1: trigger preprocessing -->
+    <div v-if="!inReview" class="actions">
+      <button :disabled="!canPreprocess" @click="preprocess">
+        {{ preprocessing ? 'Preprocessing…' : 'Preprocess & Review' }}
       </button>
     </div>
 
-    <p v-if="submitError" class="error">{{ submitError }}</p>
+    <p v-if="preprocessing" class="busy-message">
+      Normalizing text… this may take a few seconds.
+    </p>
+    <p v-if="preprocessError" class="error">{{ preprocessError }}</p>
+
+    <!-- Step 2: review the normalized text and confirm (REQ-USA-normalized-text-review) -->
+    <div v-if="inReview" class="review-section">
+      <h2>Review normalized text</h2>
+      <p class="review-hint">
+        This is exactly what will be read aloud, including how numbers, dates, and
+        symbols were verbalized. Review it — and edit if needed — then confirm to
+        start generation.
+      </p>
+      <p class="char-counts">
+        {{ originalCharCount }} → {{ normalizedCharCount }} characters after normalization
+      </p>
+      <textarea
+        v-model="normalizedText"
+        class="review-textarea"
+        rows="16"
+        :disabled="submitting || !!activeJobId"
+        aria-label="Normalized text to be synthesized"
+      ></textarea>
+
+      <div v-if="!activeJobId" class="actions">
+        <button :disabled="!canSynthesize" @click="submitJob">
+          {{ submitting ? 'Submitting…' : 'Confirm & Start Synthesis' }}
+        </button>
+        <button class="btn-secondary" :disabled="submitting" @click="resetForm">
+          Start Over
+        </button>
+      </div>
+
+      <p v-if="submitError" class="error">{{ submitError }}</p>
+    </div>
 
     <!-- Job progress section -->
     <div v-if="activeJobId" class="progress-section">
@@ -202,6 +288,10 @@ onUnmounted(() => {
       </p>
 
       <p v-if="jobError" class="error">{{ jobError }}</p>
+    </div>
+
+    <div v-if="jobCompleted || jobError" class="actions">
+      <button class="btn-secondary" @click="resetForm">New Audiobook</button>
     </div>
   </div>
 </template>
@@ -250,9 +340,49 @@ onUnmounted(() => {
   color: #d32f2f;
 }
 
+.busy-message {
+  color: #1565c0;
+  font-style: italic;
+}
+
 .success-message {
   color: #2e7d32;
   font-weight: 500;
+}
+
+.review-section {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.review-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+}
+
+.review-hint {
+  color: #555;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.char-counts {
+  color: #666;
+  font-size: 0.8125rem;
+  margin-bottom: 0.5rem;
+}
+
+.review-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical;
+  margin-bottom: 0.75rem;
 }
 
 .progress-section {

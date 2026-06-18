@@ -21,7 +21,12 @@ vi.mock('@/composables/useSSE', () => ({
   }),
 }))
 
+const mockPreprocessFile = vi.fn()
 const mockCreateSynthesisJob = vi.fn()
+
+vi.mock('@/api/preprocess', () => ({
+  preprocessFile: (...args: unknown[]) => mockPreprocessFile(...args),
+}))
 
 vi.mock('@/api/jobs', () => ({
   createSynthesisJob: (...args: unknown[]) => mockCreateSynthesisJob(...args),
@@ -40,7 +45,6 @@ async function mountView() {
 
 async function selectFile(wrapper: ReturnType<typeof mount>, file: File) {
   const input = wrapper.find('input[type="file"]')
-  // Create a mock FileList-like structure on the input element
   Object.defineProperty(input.element, 'files', {
     value: [file],
     writable: false,
@@ -50,9 +54,27 @@ async function selectFile(wrapper: ReturnType<typeof mount>, file: File) {
   await flushPromises()
 }
 
+function findButton(wrapper: ReturnType<typeof mount>, text: string) {
+  return wrapper.findAll('button').find((b) => b.text() === text)
+}
+
+/** Select a valid file and run the preprocess step, landing in the review state. */
+async function reachReview(wrapper: ReturnType<typeof mount>, file = makeFile('book.txt', 100)) {
+  await selectFile(wrapper, file)
+  await findButton(wrapper, 'Preprocess & Review')!.trigger('click')
+  await flushPromises()
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   for (const key of Object.keys(sseHandlers)) delete sseHandlers[key]
+  mockPreprocessFile.mockResolvedValue({
+    normalized_text: 'Normalized text venticinque per cento.',
+    language: 'it',
+    model_id: 'kokoro',
+    original_char_count: 20,
+    normalized_char_count: 38,
+  })
   mockCreateSynthesisJob.mockResolvedValue({
     id: 'job-1',
     type: 'synthesis',
@@ -62,41 +84,36 @@ beforeEach(() => {
   })
 })
 
-describe('CreateView', () => {
+describe('CreateView — file selection', () => {
   it('renders the heading and file input', async () => {
     const wrapper = await mountView()
     expect(wrapper.find('h1').text()).toBe('Create Audiobook')
     expect(wrapper.find('input[type="file"]').exists()).toBe(true)
   })
 
-  it('disables Start Synthesis button when no file is selected', async () => {
+  it('disables Preprocess button when no file is selected', async () => {
     const wrapper = await mountView()
-    const btn = wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!
-    expect(btn.attributes('disabled')).toBeDefined()
+    expect(findButton(wrapper, 'Preprocess & Review')!.attributes('disabled')).toBeDefined()
   })
 
-  it('enables Start Synthesis button when a valid .txt file is selected', async () => {
+  it('enables Preprocess button when a valid .txt file is selected', async () => {
     const wrapper = await mountView()
     await selectFile(wrapper, makeFile('book.txt', 100))
-    const btn = wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!
-    expect(btn.attributes('disabled')).toBeUndefined()
+    expect(findButton(wrapper, 'Preprocess & Review')!.attributes('disabled')).toBeUndefined()
   })
 
   it('shows error when non-.txt file is selected', async () => {
     const wrapper = await mountView()
     await selectFile(wrapper, new File(['data'], 'image.png', { type: 'image/png' }))
     expect(wrapper.text()).toContain('Only .txt files are accepted')
-    const btn = wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!
-    expect(btn.attributes('disabled')).toBeDefined()
+    expect(findButton(wrapper, 'Preprocess & Review')!.attributes('disabled')).toBeDefined()
   })
 
   it('shows error when file exceeds 2 MB', async () => {
     const wrapper = await mountView()
-    const bigFile = makeFile('big.txt', 3 * 1024 * 1024)
-    await selectFile(wrapper, bigFile)
+    await selectFile(wrapper, makeFile('big.txt', 3 * 1024 * 1024))
     expect(wrapper.text()).toContain('File exceeds the 2 MB size limit')
-    const btn = wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!
-    expect(btn.attributes('disabled')).toBeDefined()
+    expect(findButton(wrapper, 'Preprocess & Review')!.attributes('disabled')).toBeDefined()
   })
 
   it('shows file info when a valid file is selected', async () => {
@@ -105,39 +122,107 @@ describe('CreateView', () => {
     expect(wrapper.find('.file-name').text()).toBe('mybook.txt')
     expect(wrapper.find('.file-size').exists()).toBe(true)
   })
+})
 
-  it('calls createSynthesisJob with selected file on submit', async () => {
+describe('CreateView — preprocess & review step', () => {
+  it('calls preprocessFile with the selected file (and language) on click', async () => {
     const wrapper = await mountView()
     const file = makeFile('book.txt', 100)
-    await selectFile(wrapper, file)
+    await reachReview(wrapper, file)
+    expect(mockPreprocessFile).toHaveBeenCalledWith(file, undefined)
+  })
 
-    const btn = wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!
-    await btn.trigger('click')
+  it('shows the normalized text in an editable textarea after preprocessing (AC1, AC2)', async () => {
+    const wrapper = await mountView()
+    await reachReview(wrapper)
+
+    const textarea = wrapper.find('textarea.review-textarea')
+    expect(textarea.exists()).toBe(true)
+    expect((textarea.element as HTMLTextAreaElement).value).toBe(
+      'Normalized text venticinque per cento.',
+    )
+    // Before/after counts are shown so the user can tell what changed.
+    expect(wrapper.find('.char-counts').text()).toContain('20')
+    expect(wrapper.find('.char-counts').text()).toContain('38')
+  })
+
+  it('does not call createSynthesisJob until the user confirms (no auto-start)', async () => {
+    const wrapper = await mountView()
+    await reachReview(wrapper)
+    expect(mockCreateSynthesisJob).not.toHaveBeenCalled()
+  })
+
+  it('shows a preprocess error when preprocessing fails', async () => {
+    mockPreprocessFile.mockRejectedValueOnce(new Error('No model loaded'))
+    const wrapper = await mountView()
+    await reachReview(wrapper)
+    expect(wrapper.text()).toContain('No model loaded')
+    // Stays on the selection step (no review textarea).
+    expect(wrapper.find('textarea.review-textarea').exists()).toBe(false)
+  })
+
+  it('Start Over returns to the file-selection step', async () => {
+    const wrapper = await mountView()
+    await reachReview(wrapper)
+    await findButton(wrapper, 'Start Over')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('textarea.review-textarea').exists()).toBe(false)
+    expect(wrapper.find('.file-name').exists()).toBe(false)
+    expect(findButton(wrapper, 'Preprocess & Review')).toBeDefined()
+  })
+})
+
+describe('CreateView — confirm & synthesize', () => {
+  it('synthesizes exactly the reviewed text with filename and resolved language (AC3)', async () => {
+    const wrapper = await mountView()
+    await reachReview(wrapper, makeFile('mybook.txt', 100))
+
+    await findButton(wrapper, 'Confirm & Start Synthesis')!.trigger('click')
     await flushPromises()
 
-    expect(mockCreateSynthesisJob).toHaveBeenCalledWith(file)
+    expect(mockCreateSynthesisJob).toHaveBeenCalledWith({
+      text: 'Normalized text venticinque per cento.',
+      source_filename: 'mybook.txt',
+      language: 'it',
+    })
+  })
+
+  it('synthesizes the edited text when the user edits before confirming (AC3)', async () => {
+    const wrapper = await mountView()
+    await reachReview(wrapper)
+
+    await wrapper.find('textarea.review-textarea').setValue('User-edited reviewed text.')
+    await findButton(wrapper, 'Confirm & Start Synthesis')!.trigger('click')
+    await flushPromises()
+
+    expect(mockCreateSynthesisJob).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'User-edited reviewed text.' }),
+    )
+  })
+
+  it('disables confirm when the reviewed text is emptied', async () => {
+    const wrapper = await mountView()
+    await reachReview(wrapper)
+    await wrapper.find('textarea.review-textarea').setValue('   ')
+    expect(findButton(wrapper, 'Confirm & Start Synthesis')!.attributes('disabled')).toBeDefined()
   })
 
   it('displays job status after successful submission', async () => {
     const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-
-    const btn = wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!
-    await btn.trigger('click')
+    await reachReview(wrapper)
+    await findButton(wrapper, 'Confirm & Start Synthesis')!.trigger('click')
     await flushPromises()
 
     expect(wrapper.find('.progress-section').exists()).toBe(true)
     expect(wrapper.text()).toContain('queued')
   })
 
-  it('shows submit error on API failure', async () => {
+  it('shows submit error on synthesis API failure', async () => {
     mockCreateSynthesisJob.mockRejectedValueOnce(new Error('No model loaded'))
-
     const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-    await wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!.trigger('click')
+    await reachReview(wrapper)
+    await findButton(wrapper, 'Confirm & Start Synthesis')!.trigger('click')
     await flushPromises()
-
     expect(wrapper.text()).toContain('No model loaded')
   })
 
@@ -151,21 +236,26 @@ describe('CreateView', () => {
     mockCreateSynthesisJob.mockRejectedValueOnce(err)
 
     const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-    await wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!.trigger('click')
+    await reachReview(wrapper)
+    await findButton(wrapper, 'Confirm & Start Synthesis')!.trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('need 20.5 MB')
     expect(wrapper.text()).toContain('have 1 MB')
   })
+})
+
+describe('CreateView — job progress via SSE', () => {
+  async function startJob(wrapper: ReturnType<typeof mount>) {
+    await reachReview(wrapper)
+    await findButton(wrapper, 'Confirm & Start Synthesis')!.trigger('click')
+    await flushPromises()
+  }
 
   it('updates progress from SSE job-progress events', async () => {
     const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-    await wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!.trigger('click')
-    await flushPromises()
+    await startJob(wrapper)
 
-    // Simulate job-progress SSE event
     for (const handler of sseHandlers['job-progress'] ?? []) {
       handler({ job_id: 'job-1', type: 'synthesis', status: 'processing', progress: 42 })
     }
@@ -180,24 +270,19 @@ describe('CreateView', () => {
 
   it('ignores SSE events for other jobs', async () => {
     const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-    await wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!.trigger('click')
-    await flushPromises()
+    await startJob(wrapper)
 
     for (const handler of sseHandlers['job-progress'] ?? []) {
       handler({ job_id: 'other-job', type: 'synthesis', status: 'processing', progress: 99 })
     }
     await flushPromises()
 
-    // Should still show the original queued status, not the event for the other job
     expect(wrapper.text()).toContain('queued')
   })
 
   it('shows success message on job-completed SSE event', async () => {
     const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-    await wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!.trigger('click')
-    await flushPromises()
+    await startJob(wrapper)
 
     for (const handler of sseHandlers['job-completed'] ?? []) {
       handler({ job_id: 'job-1', type: 'synthesis', audiobook_id: 'ab-1' })
@@ -210,9 +295,7 @@ describe('CreateView', () => {
 
   it('shows error message on job-failed SSE event', async () => {
     const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-    await wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!.trigger('click')
-    await flushPromises()
+    await startJob(wrapper)
 
     for (const handler of sseHandlers['job-failed'] ?? []) {
       handler({ job_id: 'job-1', type: 'synthesis', error_message: 'Out of VRAM' })
@@ -223,61 +306,38 @@ describe('CreateView', () => {
     expect(wrapper.text()).toContain('Out of VRAM')
   })
 
-  it('shows New Audiobook button after completion', async () => {
+  it('shows New Audiobook button after completion and resets the form', async () => {
     const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-    await wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!.trigger('click')
-    await flushPromises()
+    await startJob(wrapper)
 
-    // No "New Audiobook" button yet
-    expect(wrapper.findAll('button').find((b) => b.text() === 'New Audiobook')).toBeUndefined()
+    expect(findButton(wrapper, 'New Audiobook')).toBeUndefined()
 
     for (const handler of sseHandlers['job-completed'] ?? []) {
       handler({ job_id: 'job-1', type: 'synthesis', audiobook_id: 'ab-1' })
     }
     await flushPromises()
 
-    const newBtn = wrapper.findAll('button').find((b) => b.text() === 'New Audiobook')
+    const newBtn = findButton(wrapper, 'New Audiobook')
     expect(newBtn).toBeDefined()
-  })
 
-  it('resets form when New Audiobook is clicked', async () => {
-    const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-    await wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!.trigger('click')
+    await newBtn!.trigger('click')
     await flushPromises()
 
-    for (const handler of sseHandlers['job-completed'] ?? []) {
-      handler({ job_id: 'job-1', type: 'synthesis', audiobook_id: 'ab-1' })
-    }
-    await flushPromises()
-
-    await wrapper.findAll('button').find((b) => b.text() === 'New Audiobook')!.trigger('click')
-    await flushPromises()
-
-    // Progress section should be gone
     expect(wrapper.find('.progress-section').exists()).toBe(false)
-    // File info should be gone
+    expect(wrapper.find('textarea.review-textarea').exists()).toBe(false)
     expect(wrapper.find('.file-name').exists()).toBe(false)
   })
 
-  it('disables submit button while a job is active', async () => {
+  it('hides the confirm/start-over actions once a job is active', async () => {
     const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-    await wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!.trigger('click')
-    await flushPromises()
-
-    const btn = wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!
-    expect(btn.attributes('disabled')).toBeDefined()
+    await startJob(wrapper)
+    expect(findButton(wrapper, 'Confirm & Start Synthesis')).toBeUndefined()
+    expect(findButton(wrapper, 'Start Over')).toBeUndefined()
   })
 
-  it('disables file input while a job is active', async () => {
+  it('disables the file input while in review', async () => {
     const wrapper = await mountView()
-    await selectFile(wrapper, makeFile('book.txt', 100))
-    await wrapper.findAll('button').find((b) => b.text() === 'Start Synthesis')!.trigger('click')
-    await flushPromises()
-
-    const input = wrapper.find('input[type="file"]')
-    expect(input.attributes('disabled')).toBeDefined()
+    await reachReview(wrapper)
+    expect(wrapper.find('input[type="file"]').attributes('disabled')).toBeDefined()
   })
 })
