@@ -27,6 +27,27 @@ _SAMPLE_RATE = 24000
 # Default language code used when none is specified in kwargs (DEC-default-italian-language).
 _DEFAULT_LANG_CODE = "i"  # Italian
 
+# Kokoro's own single-character language codes:
+# 'a' American English, 'b' British English, 'e' Spanish, 'f' French,
+# 'h' Hindi, 'i' Italian, 'j' Japanese, 'p' Brazilian Portuguese,
+# 'z' Mandarin Chinese.
+_KOKORO_LANG_CODES: frozenset[str] = frozenset("abefhijpz")
+
+# Map ISO 639-1 codes to Kokoro single-char codes. The application layer
+# speaks ISO codes (e.g. "it" per DEC-default-italian-language, also produced by
+# the preprocessing pipeline and forwarded by the synthesis request); the
+# adapter translates them to Kokoro's identifier here.
+_LANG_CODE_BY_ISO: dict[str, str] = {
+    "en": "a",  # American English (Kokoro also has 'b' for British)
+    "es": "e",
+    "fr": "f",
+    "hi": "h",
+    "it": "i",
+    "ja": "j",
+    "pt": "p",  # Brazilian Portuguese
+    "zh": "z",  # Mandarin Chinese
+}
+
 # Language codes that require espeak-ng for G2P conversion.
 # English ('a', 'b') uses misaki's built-in G2P and does not need espeak-ng.
 _ESPEAK_REQUIRED_LANGS: frozenset[str] = frozenset("efhipz")
@@ -79,11 +100,15 @@ class KokoroAdapter:
         Keyword Args:
             voice: Voice name (e.g. ``"af_heart"``, ``"if_sara"``).
                    Defaults to ``"af_heart"`` when not specified.
-            language: Kokoro language code (e.g. ``"a"``, ``"i"``).
-                      If it differs from the current pipeline language,
-                      the pipeline is recreated (model weights are
-                      reused).
+            language: ISO 639-1 code (e.g. ``"it"``, ``"en"``) or a native
+                      Kokoro single-char code (e.g. ``"i"``, ``"a"``). If the
+                      resolved code differs from the current pipeline language,
+                      the pipeline is recreated (model weights are reused).
             speed: Speech speed multiplier (float, default 1.0).
+
+        Raises:
+            ValueError: If ``language`` is neither a recognized ISO code nor a
+                native Kokoro code.
         """
         if self._pipeline is None:
             raise RuntimeError("KokoroAdapter.load() must be called before synthesize()")
@@ -93,8 +118,10 @@ class KokoroAdapter:
         speed: float = kwargs.get("speed", 1.0)
 
         # Switch language if needed (reuses the loaded KModel).
-        if language is not None and language != self._current_lang_code:
-            self._switch_language(language)
+        if language is not None and language.strip() != "":
+            lang_code = self._resolve_lang_code(language)
+            if lang_code != self._current_lang_code:
+                self._switch_language(lang_code)
 
         # Collect all audio chunks from the generator.
         chunks: list[np.ndarray] = []
@@ -138,6 +165,32 @@ class KokoroAdapter:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _resolve_lang_code(value: str) -> str:
+        """Resolve *value* to a Kokoro single-char language code.
+
+        Accepts a native Kokoro code (e.g. ``"i"``, ``"a"``) for backward
+        compatibility, or an ISO 639-1 code (e.g. ``"it"``, ``"en"``) which is
+        translated to Kokoro's identifier. ISO codes are two letters and native
+        codes are one, so the two namespaces never collide.
+
+        Raises:
+            ValueError: If *value* is neither a native Kokoro code nor a
+                recognized ISO 639-1 code.
+        """
+        normalized = value.strip()
+        if normalized in _KOKORO_LANG_CODES:
+            return normalized
+        iso = normalized.lower()
+        if iso in _LANG_CODE_BY_ISO:
+            return _LANG_CODE_BY_ISO[iso]
+
+        raise ValueError(
+            f"Unsupported language {value!r} for Kokoro. Use an ISO 639-1 code "
+            f"({', '.join(sorted(_LANG_CODE_BY_ISO))}) or a native Kokoro code "
+            f"({', '.join(sorted(_KOKORO_LANG_CODES))})."
+        )
 
     @staticmethod
     def _check_espeak(lang_code: str) -> None:

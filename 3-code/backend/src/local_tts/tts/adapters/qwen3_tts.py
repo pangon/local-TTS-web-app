@@ -52,6 +52,23 @@ SUPPORTED_LANGUAGES: tuple[str, ...] = (
     "Italian",
 )
 
+# Map ISO 639-1 codes to the model's language names. The application layer
+# speaks ISO codes (e.g. "it" per DEC-default-italian-language, also produced by
+# the preprocessing pipeline and forwarded by the synthesis request); the
+# adapter translates them to the model-specific identifier here.
+_LANGUAGE_BY_ISO_CODE: dict[str, str] = {
+    "zh": "Chinese",
+    "en": "English",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "de": "German",
+    "fr": "French",
+    "ru": "Russian",
+    "pt": "Portuguese",
+    "es": "Spanish",
+    "it": "Italian",
+}
+
 
 class Qwen3TTSAdapter:
     """Model adapter for Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice.
@@ -109,16 +126,21 @@ class Qwen3TTSAdapter:
         Keyword Args:
             voice: Speaker name (e.g. ``"Vivian"``, ``"Ryan"``).
                    Defaults to ``"Vivian"`` (DEC-default-italian-language).
-            language: Full language name (e.g. ``"Italian"``, ``"English"``).
-                      Defaults to ``"Italian"``.
+            language: ISO 639-1 code (e.g. ``"it"``, ``"en"``) or the model's
+                      language name (e.g. ``"Italian"``); also accepts
+                      ``"auto"``. Defaults to ``"Italian"``.
             instruct: Optional style instruction (e.g. ``"Read slowly and calmly"``).
                       Defaults to empty string.
+
+        Raises:
+            ValueError: If ``language`` is not a recognized ISO code, model
+                language name, or ``"auto"``.
         """
         if self._model is None:
             raise RuntimeError("Qwen3TTSAdapter.load() must be called before synthesize()")
 
         speaker: str = kwargs.get("voice", _DEFAULT_SPEAKER)
-        language: str = kwargs.get("language", _DEFAULT_LANGUAGE)
+        language: str = self._resolve_language(kwargs.get("language"))
         instruct: str = kwargs.get("instruct", "")
 
         wavs, sr = self._model.generate_custom_voice(
@@ -161,6 +183,37 @@ class Qwen3TTSAdapter:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _resolve_language(value: str | None) -> str:
+        """Resolve *value* to a Qwen3-TTS language name.
+
+        Accepts an ISO 639-1 code (e.g. ``"it"``), the model's own language
+        name in any case (e.g. ``"Italian"``, ``"italian"``), or ``"auto"``.
+        ``None`` or an empty string falls back to the default
+        (``DEC-default-italian-language``).
+
+        Raises:
+            ValueError: If *value* is none of the above, so the failure is
+                clear instead of surfacing deep inside the model.
+        """
+        if value is None or value.strip() == "":
+            return _DEFAULT_LANGUAGE
+
+        code = value.strip().lower()
+        if code in _LANGUAGE_BY_ISO_CODE:
+            return _LANGUAGE_BY_ISO_CODE[code]
+        if code == "auto":
+            return "auto"
+        for name in SUPPORTED_LANGUAGES:
+            if name.lower() == code:
+                return name
+
+        raise ValueError(
+            f"Unsupported language {value!r} for Qwen3-TTS. Use an ISO 639-1 "
+            f"code ({', '.join(sorted(_LANGUAGE_BY_ISO_CODE))}), a supported "
+            f"language name ({', '.join(SUPPORTED_LANGUAGES)}), or 'auto'."
+        )
 
     @staticmethod
     def _detect_attn_implementation() -> str | None:

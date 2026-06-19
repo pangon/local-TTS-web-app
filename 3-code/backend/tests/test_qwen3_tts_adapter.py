@@ -263,6 +263,51 @@ class TestQwen3TTSAdapterSynthesize:
 
 
 # ---------------------------------------------------------------------------
+# Language resolution: ISO 639-1 codes -> model language names
+# ---------------------------------------------------------------------------
+
+class TestQwen3TTSLanguageResolution:
+    """The application layer speaks ISO 639-1 codes (e.g. ``it`` from the
+    preprocessing pipeline / DEC-default-italian-language); the adapter maps
+    them to the model's language names so synthesis does not fail with
+    'Unsupported languages: [\"it\"]'."""
+
+    def test_iso_code_it_maps_to_italian(self):
+        adapter, mock_model = _loaded_adapter()
+        adapter.synthesize("Ciao", language="it")
+        assert mock_model.generate_custom_voice.call_args.kwargs["language"] == "Italian"
+
+    def test_iso_code_en_maps_to_english(self):
+        adapter, mock_model = _loaded_adapter()
+        adapter.synthesize("Hello", language="en")
+        assert mock_model.generate_custom_voice.call_args.kwargs["language"] == "English"
+
+    def test_iso_code_is_case_insensitive(self):
+        adapter, mock_model = _loaded_adapter()
+        adapter.synthesize("Ciao", language="IT")
+        assert mock_model.generate_custom_voice.call_args.kwargs["language"] == "Italian"
+
+    def test_model_language_name_passes_through_any_case(self):
+        adapter, mock_model = _loaded_adapter()
+        adapter.synthesize("Hello", language="italian")
+        assert mock_model.generate_custom_voice.call_args.kwargs["language"] == "Italian"
+
+    def test_auto_is_accepted(self):
+        adapter, mock_model = _loaded_adapter()
+        adapter.synthesize("Hello", language="auto")
+        assert mock_model.generate_custom_voice.call_args.kwargs["language"] == "auto"
+
+    def test_none_falls_back_to_default(self):
+        assert Qwen3TTSAdapter._resolve_language(None) == _DEFAULT_LANGUAGE
+        assert Qwen3TTSAdapter._resolve_language("") == _DEFAULT_LANGUAGE
+
+    def test_unsupported_language_raises(self):
+        adapter, _ = _loaded_adapter()
+        with pytest.raises(ValueError, match="Unsupported language"):
+            adapter.synthesize("Hello", language="xx")
+
+
+# ---------------------------------------------------------------------------
 # FlashAttention detection
 # ---------------------------------------------------------------------------
 

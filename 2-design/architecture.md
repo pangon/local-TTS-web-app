@@ -340,6 +340,8 @@ Each compatible model is annotated with a `loader_available` flag. Models withou
 - `sample_rate -> int` — the model's output sample rate
 - `unload() -> None` — release GPU memory
 
+The application layer speaks **ISO 639-1 language codes** (`it`, `en`, …) — the same codes used by the preprocessing pipeline and `DEC-default-italian-language`, forwarded through the synthesis request to `synthesize(language=…)`. TTS models, however, use their own language identifiers (Kokoro: single-char codes like `i`; Qwen3: full names like `Italian`). Each adapter is therefore responsible for **translating the incoming ISO 639-1 code to its model-specific identifier** (and should accept its native identifiers too, plus raise a clear error for an unrecognized language). This keeps the application layer model-agnostic and localizes language naming in the adapters.
+
 ## Design Risks
 
 No unverified high-risk assumptions remain. The `GET /models/{id}/voices` endpoint will likely need model-specific adapters due to varying voice/language metadata formats across HuggingFace TTS models (see `ASM-huggingface-models-available` verification notes).

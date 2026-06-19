@@ -227,6 +227,58 @@ class TestKokoroAdapterLanguageSwitching:
         # Pipeline should not have been replaced
         assert adapter._pipeline is original_pipeline
 
+    @patch("local_tts.tts.adapters.kokoro.shutil.which", return_value="/usr/bin/espeak-ng")
+    @patch("kokoro.KPipeline")
+    def test_iso_code_switches_to_native_kokoro_code(self, mock_kpipeline, _mock_which):
+        # The app layer sends ISO 639-1 "it"; the adapter must switch the
+        # pipeline to Kokoro's native "i" rather than an invalid "it".
+        adapter = _loaded_adapter()  # current lang code is "a"
+        original_model = adapter._model
+
+        new_pipeline = MagicMock()
+        new_pipeline.return_value = iter([_make_fake_result()])
+        new_pipeline.voices = {}
+        mock_kpipeline.return_value = new_pipeline
+
+        adapter.synthesize("Ciao mondo", voice="if_sara", language="it")
+
+        mock_kpipeline.assert_called_once_with(
+            lang_code="i",
+            repo_id="hexgrad/Kokoro-82M",
+            model=original_model,
+            device="cuda",
+        )
+        assert adapter._current_lang_code == "i"
+
+    def test_unsupported_language_raises(self):
+        adapter = _loaded_adapter()
+        with pytest.raises(ValueError, match="Unsupported language"):
+            adapter.synthesize("Hello", language="xx")
+
+
+# ---------------------------------------------------------------------------
+# Language code resolution (ISO 639-1 -> native Kokoro code)
+# ---------------------------------------------------------------------------
+
+class TestKokoroLangCodeResolution:
+    def test_iso_codes_map_to_native_codes(self):
+        assert KokoroAdapter._resolve_lang_code("it") == "i"
+        assert KokoroAdapter._resolve_lang_code("en") == "a"
+        assert KokoroAdapter._resolve_lang_code("es") == "e"
+
+    def test_iso_code_is_case_insensitive(self):
+        assert KokoroAdapter._resolve_lang_code("IT") == "i"
+
+    def test_native_codes_pass_through(self):
+        # Backward compatibility: callers may still pass Kokoro's own codes.
+        assert KokoroAdapter._resolve_lang_code("i") == "i"
+        assert KokoroAdapter._resolve_lang_code("a") == "a"
+        assert KokoroAdapter._resolve_lang_code("b") == "b"
+
+    def test_unsupported_language_raises(self):
+        with pytest.raises(ValueError, match="Unsupported language"):
+            KokoroAdapter._resolve_lang_code("xx")
+
 
 # ---------------------------------------------------------------------------
 # espeak-ng validation
