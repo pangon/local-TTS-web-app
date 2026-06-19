@@ -118,16 +118,16 @@ class TestPreprocessSuccess:
         assert data["normalized_char_count"] == len(data["normalized_text"])
 
     @pytest.mark.anyio
-    async def test_language_is_forwarded_to_pipeline(self, test_app):
+    async def test_supported_language_is_forwarded_to_pipeline(self, test_app):
         app, _ = test_app
         async with _client(app) as client:
             resp = await client.post(
                 "/api/v1/preprocess",
-                data={"text": "Hello world.", "language": "en"},
+                data={"text": "Ciao mondo.", "language": "it"},
             )
 
         assert resp.status_code == 200
-        assert resp.json()["language"] == "en"
+        assert resp.json()["language"] == "it"
 
 
 class TestNormalizationApplied:
@@ -304,6 +304,32 @@ class TestModelLoadedCheck:
             resp = await client.post(
                 "/api/v1/preprocess",
                 files={"file": ("book.pdf", io.BytesIO(b"x"), "application/pdf")},
+            )
+        assert resp.status_code == 400
+
+    @pytest.mark.anyio
+    async def test_unsupported_language_returns_400(self, test_app):
+        """An output language with no registered data is rejected (400)
+        rather than silently passing the text through unchanged."""
+        app, _ = test_app
+        async with _client(app) as client:
+            resp = await client.post(
+                "/api/v1/preprocess",
+                data={"text": "Hello world.", "language": "en"},
+            )
+        assert resp.status_code == 400
+        assert "Unsupported output language" in resp.json()["detail"]
+
+    @pytest.mark.anyio
+    async def test_unsupported_language_precedes_model_check(self, test_app):
+        """Language validation is an input check, so it returns 400 even when
+        no model is loaded (matching the validate-then-check ordering)."""
+        app, mock_engine = test_app
+        mock_engine.loaded_model_id = None
+        async with _client(app) as client:
+            resp = await client.post(
+                "/api/v1/preprocess",
+                data={"text": "Hello world.", "language": "en"},
             )
         assert resp.status_code == 400
 

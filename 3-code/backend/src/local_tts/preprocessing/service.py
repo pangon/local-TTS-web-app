@@ -81,6 +81,11 @@ class PreprocessingService:
                 language when ``None`` or empty.
             model_id: Currently loaded model selecting the model profile;
                 ``None`` uses the default profile.
+
+        Raises:
+            UnsupportedLanguageError: If *language* has no registered data
+                (preprocessing rewrites are language-specific, so an
+                unsupported language is rejected rather than no-op'd).
         """
         language_profile = resolve_language_profile(language)
         model_profile = resolve_model_profile(model_id)

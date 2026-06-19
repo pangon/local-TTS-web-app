@@ -23,7 +23,11 @@ import logging
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
-from local_tts.preprocessing import PreprocessingService
+from local_tts.preprocessing import (
+    PreprocessingService,
+    UnsupportedLanguageError,
+    supported_languages,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +122,17 @@ async def preprocess_text(
         raw_text = text
         if not raw_text.strip():
             raise HTTPException(status_code=400, detail="Text input is empty")
+
+    # Reject an unsupported output language as an input error (400), before the
+    # model check — following the input-validation-precedes-model-check
+    # precedent. Preprocessing rewrites are language-specific, so an
+    # unsupported language is rejected rather than silently no-op'd (an empty
+    # or omitted language falls back to the supported default).
+    if language and language not in supported_languages():
+        raise HTTPException(
+            status_code=400,
+            detail=str(UnsupportedLanguageError(language, supported_languages())),
+        )
 
     # The pipeline applies the loaded model's profile (DEC-preprocess-review-flow);
     # the API layer owns the "no model loaded" error so the service stays

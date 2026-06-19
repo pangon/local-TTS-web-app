@@ -215,7 +215,7 @@ graph LR
 
 **Configuration (two axes, `REQ-MNT-preprocessing-pipeline`):**
 
-- **Language profile** — keyed by output language code (default `it`, `DEC-default-italian-language`): verbalization rule tables and the built-in abbreviation set.
+- **Language profile** — keyed by output language code (default `it`, `DEC-default-italian-language`): verbalization rule tables and the built-in abbreviation set. A language with no registered data is **rejected** (the `/preprocess` API returns 400) rather than silently passing the text through unchanged, since preprocessing rewrites are language-specific.
 - **Model profile** — keyed by `model_id`, with a default fallback: which stages run and their parameters, accommodating different models' input expectations without modifying shared stage logic.
 - **Optional domain dictionary** — a file on disk (e.g. `config/preprocessing/domain_dictionary.json`) mapping acronyms/technical terms to spoken forms; applied when present, built-in defaults otherwise (`REQ-F-abbreviation-expansion`). Delivery mechanism refinable.
 

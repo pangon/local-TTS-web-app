@@ -38,6 +38,27 @@ logger = logging.getLogger(__name__)
 # Default output language (DEC-default-italian-language).
 DEFAULT_LANGUAGE = "it"
 
+
+class UnsupportedLanguageError(ValueError):
+    """Raised when a requested output language has no registered data.
+
+    Preprocessing rewrites (number/date/currency/abbreviation verbalization)
+    are language-specific. A language with no registered data would silently
+    pass the text through unchanged, misrepresenting the reviewed "normalized"
+    text as if normalization had succeeded (``REQ-USA-normalized-text-review``).
+    The pipeline therefore rejects an unsupported language rather than
+    degrading to a no-op, so the caller can surface a clear error.
+    """
+
+    def __init__(self, language: str, supported: tuple[str, ...]) -> None:
+        self.language = language
+        self.supported = supported
+        supported_list = ", ".join(supported) if supported else "(none)"
+        super().__init__(
+            f"Unsupported output language '{language}'. "
+            f"Supported languages: {supported_list}."
+        )
+
 # Canonical full stage order.  The default model profile runs the subset of
 # these that is actually registered, in this order — so a stage joins the
 # pipeline automatically once its task registers it.
@@ -106,15 +127,24 @@ def clear_language_data(language: str | None = None) -> None:
         _LANGUAGE_DATA.pop(language, None)
 
 
+def supported_languages() -> tuple[str, ...]:
+    """Output languages with registered data, sorted for stable display."""
+    return tuple(sorted(_LANGUAGE_DATA))
+
+
 def resolve_language_profile(language: str | None) -> LanguageProfile:
     """Resolve the language profile for *language*.
 
     Falls back to :data:`DEFAULT_LANGUAGE` when *language* is ``None`` or
-    empty.  Unknown languages resolve to an empty profile rather than failing,
-    so preprocessing still runs (with no language-specific behavior).
+    empty.  A language with no registered data is rejected with
+    :class:`UnsupportedLanguageError` — preprocessing rewrites are
+    language-specific, so silently passing the text through for an
+    unsupported language would misrepresent the reviewed "normalized" text.
     """
     code = language or DEFAULT_LANGUAGE
-    return LanguageProfile(language=code, data=dict(_LANGUAGE_DATA.get(code, {})))
+    if code not in _LANGUAGE_DATA:
+        raise UnsupportedLanguageError(code, supported_languages())
+    return LanguageProfile(language=code, data=dict(_LANGUAGE_DATA[code]))
 
 
 # ---------------------------------------------------------------------------

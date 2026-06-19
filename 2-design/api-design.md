@@ -184,9 +184,9 @@ Runs the text-normalization pipeline synchronously and returns the normalized, T
 |-------|------|----------|-------------|
 | `file` | file | Conditional | `.txt` file, UTF-8 encoded, ≤ 2 MB (audiobook path) (`REQ-F-upload-text-file`) |
 | `text` | string | Conditional | Raw text input (preview path) |
-| `language` | string | No | Output language for verbalization rules (defaults to `it`) |
+| `language` | string | No | Output language for verbalization rules (defaults to `it`). Must be a supported language — one with registered preprocessing data. |
 
-Exactly one of `file` or `text` must be provided.
+Exactly one of `file` or `text` must be provided. An omitted/empty `language` falls back to the default (`it`); an explicitly supplied language that has no registered preprocessing data is rejected (see 400 below) rather than silently passing the text through unchanged, since preprocessing rewrites are language-specific.
 
 **Response 200:**
 
@@ -202,7 +202,7 @@ Exactly one of `file` or `text` must be provided.
 
 `normalized_text` is the exact text that will be synthesized if the user confirms. `model_id` is the currently loaded model whose profile was applied. `original_char_count` / `normalized_char_count` support a before/after review display.
 
-**Response 400:** Invalid file type (not `.txt`), file exceeds 2 MB, empty input, or neither/both of `file` and `text` supplied.
+**Response 400:** Invalid file type (not `.txt`), file exceeds 2 MB, empty input, neither/both of `file` and `text` supplied, or an unsupported output `language` (no registered preprocessing data): `{"detail": "Unsupported output language '<code>'. Supported languages: <list>."}`. Language validation is an input check, so it precedes the model-loaded check.
 
 **Response 409:** No model loaded: `{"detail": "No model loaded"}`.
 

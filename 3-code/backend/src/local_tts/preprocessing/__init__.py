@@ -29,12 +29,14 @@ from local_tts.preprocessing.profiles import (
     DEFAULT_STAGE_ORDER,
     LanguageProfile,
     ModelProfile,
+    UnsupportedLanguageError,
     default_model_profile,
     load_domain_dictionary,
     register_language_data,
     register_model_profile,
     resolve_language_profile,
     resolve_model_profile,
+    supported_languages,
 )
 from local_tts.preprocessing.service import PreprocessingService, PreprocessResult
 from local_tts.preprocessing.stages import (
@@ -96,6 +98,7 @@ __all__ = [
     "build_pipeline",
     "LanguageProfile",
     "ModelProfile",
+    "UnsupportedLanguageError",
     "DEFAULT_LANGUAGE",
     "DEFAULT_STAGE_ORDER",
     "STAGE_UNICODE_SANITIZATION",
@@ -113,6 +116,7 @@ __all__ = [
     "register_model_profile",
     "resolve_language_profile",
     "resolve_model_profile",
+    "supported_languages",
     "default_model_profile",
     "load_domain_dictionary",
 ]

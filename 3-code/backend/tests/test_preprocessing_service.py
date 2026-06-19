@@ -23,6 +23,7 @@ from local_tts.preprocessing import profiles as pr
 from local_tts.preprocessing import stages as st
 from local_tts.preprocessing.profiles import (
     ModelProfile,
+    UnsupportedLanguageError,
     register_language_data,
     register_model_profile,
 )
@@ -85,8 +86,13 @@ class TestIdentityAndMetadata:
         assert result.language == "it"
         assert result.model_id == "vendor/model"
 
-    def test_explicit_language_recorded(self):
+    def test_explicit_supported_language_recorded(self):
+        register_language_data("en", {})
         assert _service().preprocess("x", language="en").language == "en"
+
+    def test_unsupported_language_raises(self):
+        with pytest.raises(UnsupportedLanguageError):
+            _service().preprocess("x", language="xx")
 
     def test_char_counts(self):
         class Doubler:

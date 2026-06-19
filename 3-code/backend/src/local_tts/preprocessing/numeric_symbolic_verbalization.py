@@ -25,10 +25,11 @@ ordinal indicators) arrives through the resolved :class:`StageConfig`'s
 ``language_data`` namespace, exposed for the default language as
 :data:`BUILTIN_LANGUAGE_DATA`; behaviour switches arrive through the model
 profile's ``params`` via ``PARAM_*`` constants
-(``DEC-text-preprocessing-pipeline``).  Without language data for the configured
-language the stage is a no-op, so unknown languages pass through unchanged
-(mirroring :func:`~local_tts.preprocessing.profiles.resolve_language_profile`'s
-empty-profile fallback).
+(``DEC-text-preprocessing-pipeline``).  If the resolved language data lacks
+this stage's namespace the stage is a defensive no-op; note that an entirely
+unregistered output language never reaches a stage — it is rejected upstream by
+:func:`~local_tts.preprocessing.profiles.resolve_language_profile` with
+:class:`~local_tts.preprocessing.profiles.UnsupportedLanguageError`.
 
 The exact patterns are deliberately conservative and refined through testing
 (``REQ-F-text-numeric-symbolic-verbalization``).  Known heuristics: ``N°`` is

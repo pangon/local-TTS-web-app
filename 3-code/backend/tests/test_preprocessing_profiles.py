@@ -15,12 +15,14 @@ from local_tts.preprocessing.profiles import (
     DEFAULT_LANGUAGE,
     DEFAULT_STAGE_ORDER,
     ModelProfile,
+    UnsupportedLanguageError,
     default_model_profile,
     load_domain_dictionary,
     register_language_data,
     register_model_profile,
     resolve_language_profile,
     resolve_model_profile,
+    supported_languages,
 )
 from local_tts.preprocessing.stages import (
     STAGE_LAYOUT_REPAIR,
@@ -63,11 +65,32 @@ class TestLanguageProfile:
         assert resolve_language_profile(None).language == "it"
         assert resolve_language_profile("").language == "it"
 
-    def test_explicit_language_resolves(self):
+    def test_explicit_supported_language_resolves(self):
+        register_language_data("en", {"mark": "EN"})
         assert resolve_language_profile("en").language == "en"
 
-    def test_unknown_language_has_empty_data(self):
-        assert resolve_language_profile("xx").data == {}
+    def test_unknown_language_raises(self):
+        # A language with no registered data is rejected rather than no-op'd,
+        # so the "normalized" text never misleadingly equals the raw input.
+        with pytest.raises(UnsupportedLanguageError) as exc_info:
+            resolve_language_profile("xx")
+        assert exc_info.value.language == "xx"
+        # The default (Italian) data self-registers on import, so it is listed
+        # among the supported languages reported by the error.
+        assert "it" in exc_info.value.supported
+
+    def test_default_language_with_no_data_raises(self):
+        # Even the default falls under the same rule: if its data is absent the
+        # resolver refuses rather than silently producing an empty profile.
+        pr._LANGUAGE_DATA.clear()
+        with pytest.raises(UnsupportedLanguageError):
+            resolve_language_profile(None)
+
+    def test_supported_languages_reflects_registry(self):
+        pr._LANGUAGE_DATA.clear()
+        register_language_data("it", {"numeric": {}})
+        register_language_data("en", {"numeric": {}})
+        assert supported_languages() == ("en", "it")  # sorted
 
     def test_registered_data_is_returned(self):
         # Built-in stage data self-registers on import; start from a clean

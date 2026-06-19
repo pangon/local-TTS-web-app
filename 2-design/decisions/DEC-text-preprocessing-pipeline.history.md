@@ -38,3 +38,4 @@ This decision would be revisited if profiling shows the synchronous CPU pipeline
 | Date | Change | Involvement |
 |------|--------|-------------|
 | 2026-06-16 | Initial decision | ai-proposed/human-approved |
+| 2026-06-19 | Clarified the language-axis policy: a requested output language with no registered data is **rejected** (API 400), not treated as a no-op. Surfaced during manual testing (runbook 5.1.8) — `language=en` produced no rewriting because only `it` data ships, which silently returned the raw text as "normalized" and misled the reviewer. The original no-op-for-unknown-language behavior (a code/runbook default, never mandated by this decision) is reversed; the domain-dictionary absence-tolerance is unaffected. Added a Required check and a Prohibited pattern. | human-decided |

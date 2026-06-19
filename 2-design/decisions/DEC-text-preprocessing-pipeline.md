@@ -8,7 +8,7 @@
 
 **Source**: [REQ-MNT-preprocessing-pipeline](../../1-objectives/requirements/REQ-MNT-preprocessing-pipeline.md), [GOAL-text-normalization](../../1-objectives/goals/GOAL-text-normalization.md), [REQ-F-text-unicode-sanitization](../../1-objectives/requirements/REQ-F-text-unicode-sanitization.md), [REQ-F-text-layout-repair](../../1-objectives/requirements/REQ-F-text-layout-repair.md), [REQ-F-text-numeric-symbolic-verbalization](../../1-objectives/requirements/REQ-F-text-numeric-symbolic-verbalization.md), [REQ-F-abbreviation-expansion](../../1-objectives/requirements/REQ-F-abbreviation-expansion.md)
 
-**Last updated**: 2026-06-16
+**Last updated**: 2026-06-19
 
 ## Context
 
@@ -27,7 +27,7 @@ The service runs a **modular pipeline of discrete, independently unit-testable s
 
 The pipeline is configurable along two axes (`REQ-MNT-preprocessing-pipeline`):
 
-- **Language profile** (keyed by language code; default `it` per `DEC-default-italian-language`): verbalization rule tables and the built-in abbreviation set.
+- **Language profile** (keyed by language code; default `it` per `DEC-default-italian-language`): verbalization rule tables and the built-in abbreviation set. A requested output language that has no registered data is **rejected** rather than degrading to a no-op: because the rewrites are language-specific, an unregistered language would silently return the raw text as if it had been normalized, misleading the user reviewing it (`REQ-USA-normalized-text-review`). The empty/omitted language still falls back to the supported default. (This rejection policy is specific to the **language** axis; the optional domain dictionary keeps its absence-tolerant behavior — see below.)
 - **Model profile** (keyed by `model_id`, with a default fallback): which stages run and their parameters, accommodating differing model input expectations without modifying shared stage logic. The service reads the currently loaded model (via the Model Service) to select the model profile.
 - **Optional domain dictionary**: a file on disk (e.g. `config/preprocessing/domain_dictionary.json`) mapping acronyms/technical terms to spoken forms; applied when present, built-in defaults otherwise. Delivery mechanism refinable.
 
@@ -50,7 +50,7 @@ Layout repair runs **before** chapter detection (which remains in the Job Servic
 ### Required checks
 
 1. Verify stages are independently unit-testable (each has tests exercising it in isolation).
-2. Verify that for a configured output language the language-appropriate stages/rules are selected.
+2. Verify that for a configured output language the language-appropriate stages/rules are selected, and that an output language with no registered data is rejected with a clear error (surfaced by the API as a 400) rather than silently producing an unchanged "normalized" text.
 3. Verify two different models can apply different model profiles without changing shared stage code.
 4. Verify layout repair preserves paragraph/chapter boundaries and does not defeat chapter detection.
 
@@ -59,3 +59,4 @@ Layout repair runs **before** chapter detection (which remains in the Job Servic
 - A single monolithic preprocessing function combining all cleaning concerns.
 - Placing the preprocessing pipeline inside the TTS subpackage (it is GPU-inference-only).
 - Hardcoding language- or model-specific rules into shared stage logic.
+- Silently treating an unregistered output language as a no-op (returning the raw text unchanged); it must be rejected so the reviewed text is never a passthrough masquerading as normalized output.
