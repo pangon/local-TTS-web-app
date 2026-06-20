@@ -24,19 +24,105 @@ logger = logging.getLogger(__name__)
 
 _VRAM_OVERHEAD_FACTOR = 1.5
 
-COMPATIBLE_MODELS: dict[str, str] = {
-    "ResembleAI/chatterbox": "Chatterbox Multilingual (MIT, 23 langs incl. Italian)",
-    "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice": "Qwen3-TTS 1.7B (Apache 2.0, 10 langs incl. Italian)",
-    "FunAudioLLM/Fun-CosyVoice3-0.5B-2512": "CosyVoice 3 0.5B (Apache 2.0, 9 langs incl. Italian)",
-    "hexgrad/Kokoro-82M": "Kokoro 82M (Apache 2.0, Italian voices: if_sara, im_nicola)",
-    "bosonai/higgs-audio-v2-generation-3B-base": "Higgs Audio V2 3B (Apache 2.0, Italian partial)",
-    "coqui/XTTS-v2": "XTTS-v2 (MPL-2.0/CPML, 17 langs, first-class Italian)",
-    "fishaudio/fish-speech-1.5": "Fish Speech v1.5 (CC-BY-NC-SA, Italian <10K hrs)",
-    "canopylabs/orpheus-3b-0.1-ft": "Orpheus TTS 3B (Apache 2.0, Italian experimental)",
-    "SWivid/F5-TTS": "F5-TTS (MIT/CC-BY-NC, Italian cross-lingual only)",
-    "parler-tts/parler-tts-mini-multilingual-v1.1": "Parler-TTS Mini Multilingual (Apache 2.0, 8 langs incl. Italian)",
-    "Zyphra/Zonos-v0.1-transformer": "Zonos 1.6B (Apache 2.0, Italian limited)",
-    "nari-labs/Dia-1.6B-0626": "Dia 1.6B (Apache 2.0, English only)",
+
+@dataclass(frozen=True)
+class ModelCatalogEntry:
+    """Static catalog metadata for a compatible TTS model.
+
+    ``license`` is the model-weights license (an SPDX-style identifier or a
+    short name). ``license_is_foss`` is ``True`` only when that license is
+    OSI open-source (e.g. Apache-2.0, MIT); it is ``False`` for open-weight
+    but research / non-commercial licenses. When ``license_is_foss`` is
+    ``False`` a non-empty ``license_notice`` describing the usage terms must
+    be present so the frontend can disclose them (``DEC-model-license-disclosure``).
+    """
+
+    name: str
+    license: str
+    license_is_foss: bool
+    license_notice: str | None = None
+
+
+# License metadata records the *model-weights* license verified against each
+# model's HuggingFace card. Several models ship FOSS code but non-commercial
+# weights (XTTS-v2, fish-speech, F5-TTS) — the weights license governs here,
+# so those are marked non-FOSS with a disclosure notice (DEC-model-license-disclosure).
+COMPATIBLE_MODELS: dict[str, ModelCatalogEntry] = {
+    "ResembleAI/chatterbox": ModelCatalogEntry(
+        name="Chatterbox Multilingual (MIT, 23 langs incl. Italian)",
+        license="MIT",
+        license_is_foss=True,
+    ),
+    "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice": ModelCatalogEntry(
+        name="Qwen3-TTS 1.7B (Apache 2.0, 10 langs incl. Italian)",
+        license="Apache-2.0",
+        license_is_foss=True,
+    ),
+    "FunAudioLLM/Fun-CosyVoice3-0.5B-2512": ModelCatalogEntry(
+        name="CosyVoice 3 0.5B (Apache 2.0, 9 langs incl. Italian)",
+        license="Apache-2.0",
+        license_is_foss=True,
+    ),
+    "hexgrad/Kokoro-82M": ModelCatalogEntry(
+        name="Kokoro 82M (Apache 2.0, Italian voices: if_sara, im_nicola)",
+        license="Apache-2.0",
+        license_is_foss=True,
+    ),
+    "bosonai/higgs-audio-v2-generation-3B-base": ModelCatalogEntry(
+        name="Higgs Audio V2 3B (Apache 2.0, Italian partial)",
+        license="Apache-2.0",
+        license_is_foss=True,
+    ),
+    "coqui/XTTS-v2": ModelCatalogEntry(
+        name="XTTS-v2 (MPL-2.0/CPML, 17 langs, first-class Italian)",
+        license="Coqui Public Model License (CPML)",
+        license_is_foss=False,
+        license_notice=(
+            "Model weights under the Coqui Public Model License (CPML): free "
+            "for non-commercial and personal use only; commercial use requires "
+            "a separate license."
+        ),
+    ),
+    "fishaudio/fish-speech-1.5": ModelCatalogEntry(
+        name="Fish Speech v1.5 (CC-BY-NC-SA, Italian <10K hrs)",
+        license="CC-BY-NC-SA-4.0",
+        license_is_foss=False,
+        license_notice=(
+            "Creative Commons BY-NC-SA 4.0: free for non-commercial and "
+            "personal use with attribution and share-alike; commercial use is "
+            "not permitted."
+        ),
+    ),
+    "canopylabs/orpheus-3b-0.1-ft": ModelCatalogEntry(
+        name="Orpheus TTS 3B (Apache 2.0, Italian experimental)",
+        license="Apache-2.0",
+        license_is_foss=True,
+    ),
+    "SWivid/F5-TTS": ModelCatalogEntry(
+        name="F5-TTS (MIT/CC-BY-NC, Italian cross-lingual only)",
+        license="CC-BY-NC-4.0",
+        license_is_foss=False,
+        license_notice=(
+            "Model weights under Creative Commons BY-NC 4.0 (the code is MIT): "
+            "free for non-commercial and personal use; commercial use is not "
+            "permitted."
+        ),
+    ),
+    "parler-tts/parler-tts-mini-multilingual-v1.1": ModelCatalogEntry(
+        name="Parler-TTS Mini Multilingual (Apache 2.0, 8 langs incl. Italian)",
+        license="Apache-2.0",
+        license_is_foss=True,
+    ),
+    "Zyphra/Zonos-v0.1-transformer": ModelCatalogEntry(
+        name="Zonos 1.6B (Apache 2.0, Italian limited)",
+        license="Apache-2.0",
+        license_is_foss=True,
+    ),
+    "nari-labs/Dia-1.6B-0626": ModelCatalogEntry(
+        name="Dia 1.6B (Apache 2.0, English only)",
+        license="Apache-2.0",
+        license_is_foss=True,
+    ),
 }
 
 
@@ -49,6 +135,9 @@ class ModelInfo:
     is_cached: bool
     is_loaded: bool
     loader_available: bool
+    license: str = ""
+    license_is_foss: bool = True
+    license_notice: str | None = None
 
 
 @dataclass(frozen=True)
@@ -96,12 +185,15 @@ class ModelLoader:
         return [
             ModelInfo(
                 model_id=mid,
-                name=name,
+                name=entry.name,
                 is_cached=mid in cached_ids,
                 is_loaded=mid == self._loaded_model_id,
                 loader_available=has_adapter(mid),
+                license=entry.license,
+                license_is_foss=entry.license_is_foss,
+                license_notice=entry.license_notice,
             )
-            for mid, name in COMPATIBLE_MODELS.items()
+            for mid, entry in COMPATIBLE_MODELS.items()
         ]
 
     def is_cached(self, model_id: str) -> bool:

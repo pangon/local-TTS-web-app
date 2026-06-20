@@ -20,6 +20,7 @@ from local_tts.tts.gpu_validator import VRAMCheckResult
 from local_tts.tts.model_loader import (
     COMPATIBLE_MODELS,
     DiskSpaceCheck,
+    ModelCatalogEntry,
     ModelInfo,
     ModelLoadError,
     ModelLoader,
@@ -141,6 +142,57 @@ class TestListModels:
             assert by_id["ResembleAI/chatterbox"].loader_available is False
         finally:
             _ADAPTER_REGISTRY.pop("hexgrad/Kokoro-82M", None)
+
+
+# ---------------------------------------------------------------------------
+# License metadata (DEC-model-license-disclosure)
+# ---------------------------------------------------------------------------
+
+class TestLicenseMetadata:
+    def test_every_catalog_entry_has_license_metadata(self):
+        # Every model must carry a non-empty license name and a FOSS flag.
+        for model_id, entry in COMPATIBLE_MODELS.items():
+            assert isinstance(entry, ModelCatalogEntry), model_id
+            assert entry.license, f"{model_id} has no license name"
+            assert isinstance(entry.license_is_foss, bool), model_id
+
+    def test_non_foss_models_have_a_notice_and_foss_models_do_not(self):
+        # DEC-model-license-disclosure required checks 1 & 2: non-FOSS models
+        # must carry a disclosure notice; FOSS models carry none.
+        for model_id, entry in COMPATIBLE_MODELS.items():
+            if entry.license_is_foss:
+                assert entry.license_notice is None, (
+                    f"{model_id} is FOSS but has a license notice"
+                )
+            else:
+                assert entry.license_notice, (
+                    f"{model_id} is non-FOSS but has no disclosure notice"
+                )
+
+    @patch("local_tts.tts.model_loader.scan_cache_dir")
+    def test_list_models_surfaces_license_metadata(self, mock_scan, loader: ModelLoader):
+        mock_scan.return_value = _make_scan_result([])
+        by_id = {m.model_id: m for m in loader.list_models()}
+        # FOSS example
+        kokoro = by_id["hexgrad/Kokoro-82M"]
+        assert kokoro.license == "Apache-2.0"
+        assert kokoro.license_is_foss is True
+        assert kokoro.license_notice is None
+        # Non-FOSS example: weights under a non-commercial license
+        xtts = by_id["coqui/XTTS-v2"]
+        assert xtts.license_is_foss is False
+        assert xtts.license_notice
+
+    @patch("local_tts.tts.model_loader.scan_cache_dir")
+    def test_known_non_foss_models_flagged(self, mock_scan, loader: ModelLoader):
+        mock_scan.return_value = _make_scan_result([])
+        by_id = {m.model_id: m for m in loader.list_models()}
+        for model_id in (
+            "coqui/XTTS-v2",
+            "fishaudio/fish-speech-1.5",
+            "SWivid/F5-TTS",
+        ):
+            assert by_id[model_id].license_is_foss is False, model_id
 
 
 # ---------------------------------------------------------------------------
