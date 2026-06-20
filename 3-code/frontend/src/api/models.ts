@@ -6,6 +6,12 @@ export interface Model {
   is_cached: boolean
   is_loaded: boolean
   loader_available: boolean
+  /** SPDX-style license identifier of the model weights (e.g. "Apache-2.0"). */
+  license: string
+  /** True when the license is OSI open-source / FOSS; false for research / non-commercial. */
+  license_is_foss: boolean
+  /** Usage-terms disclosure shown for non-FOSS models; null when the model is FOSS. */
+  license_notice: string | null
 }
 
 export interface DownloadResponse {

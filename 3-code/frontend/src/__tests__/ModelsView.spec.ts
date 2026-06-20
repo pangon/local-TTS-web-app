@@ -32,21 +32,24 @@ vi.mock('@/api/models', () => ({
   loadModel: (...args: unknown[]) => mockLoadModel(...args),
 }))
 
+/** Default FOSS license metadata shared by fixtures that don't exercise the disclosure. */
+const FOSS = { license: 'Apache-2.0', license_is_foss: true, license_notice: null }
+
 function sampleModels(): Model[] {
   return [
-    { model_id: 'facebook/mms-tts-eng', name: 'MMS TTS English', is_cached: false, is_loaded: false, loader_available: true },
-    { model_id: 'facebook/mms-tts-ita', name: 'MMS TTS Italian', is_cached: true, is_loaded: false, loader_available: true },
-    { model_id: 'facebook/mms-tts-fra', name: 'MMS TTS French', is_cached: true, is_loaded: true, loader_available: true },
+    { model_id: 'facebook/mms-tts-eng', name: 'MMS TTS English', is_cached: false, is_loaded: false, loader_available: true, ...FOSS },
+    { model_id: 'facebook/mms-tts-ita', name: 'MMS TTS Italian', is_cached: true, is_loaded: false, loader_available: true, ...FOSS },
+    { model_id: 'facebook/mms-tts-fra', name: 'MMS TTS French', is_cached: true, is_loaded: true, loader_available: true, ...FOSS },
   ]
 }
 
 /** Mixed set: two models with an adapter, two without (distinct names to avoid substring clashes). */
 function mixedModels(): Model[] {
   return [
-    { model_id: 'with/sigma-cached', name: 'Sigma Cached', is_cached: true, is_loaded: false, loader_available: true },
-    { model_id: 'with/sigma-remote', name: 'Sigma Remote', is_cached: false, is_loaded: false, loader_available: true },
-    { model_id: 'no/omega-cached', name: 'Omega Cached', is_cached: true, is_loaded: false, loader_available: false },
-    { model_id: 'no/omega-remote', name: 'Omega Remote', is_cached: false, is_loaded: false, loader_available: false },
+    { model_id: 'with/sigma-cached', name: 'Sigma Cached', is_cached: true, is_loaded: false, loader_available: true, ...FOSS },
+    { model_id: 'with/sigma-remote', name: 'Sigma Remote', is_cached: false, is_loaded: false, loader_available: true, ...FOSS },
+    { model_id: 'no/omega-cached', name: 'Omega Cached', is_cached: true, is_loaded: false, loader_available: false, ...FOSS },
+    { model_id: 'no/omega-remote', name: 'Omega Remote', is_cached: false, is_loaded: false, loader_available: false, ...FOSS },
   ]
 }
 
@@ -298,11 +301,107 @@ describe('ModelsView adapter-availability grouping', () => {
 
   it('hides the available section when no model has an adapter', async () => {
     mockFetchModels.mockResolvedValueOnce([
-      { model_id: 'no/adapter', name: 'No Adapter', is_cached: false, is_loaded: false, loader_available: false },
+      { model_id: 'no/adapter', name: 'No Adapter', is_cached: false, is_loaded: false, loader_available: false, ...FOSS },
     ])
     const wrapper = await mountView()
     expect(wrapper.find('.model-section-available').exists()).toBe(false)
     expect(wrapper.find('.model-section-unavailable').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('No models available')
+  })
+})
+
+describe('ModelsView license disclosure', () => {
+  /**
+   * Two non-FOSS models — one with an adapter (available list), one without
+   * (adapter-not-yet-available list) — plus one FOSS model, to prove the notice
+   * is rendered for every non-FOSS model regardless of which list it falls in.
+   */
+  function licenseModels(): Model[] {
+    return [
+      {
+        model_id: 'foss/apache',
+        name: 'Apache Model',
+        is_cached: false,
+        is_loaded: false,
+        loader_available: true,
+        license: 'Apache-2.0',
+        license_is_foss: true,
+        license_notice: null,
+      },
+      {
+        model_id: 'nonfoss/with-adapter',
+        name: 'Research Adapter Model',
+        is_cached: false,
+        is_loaded: false,
+        loader_available: true,
+        license: 'Fish Audio Research License',
+        license_is_foss: false,
+        license_notice: 'Free for personal use; commercial use requires a separate license.',
+      },
+      {
+        model_id: 'nonfoss/no-adapter',
+        name: 'Research No-Adapter Model',
+        is_cached: false,
+        is_loaded: false,
+        loader_available: false,
+        license: 'Boson Research & Non-Commercial License',
+        license_is_foss: false,
+        license_notice: 'Non-commercial use only; commercial use requires a paid license.',
+      },
+    ]
+  }
+
+  it('renders a license notice only for non-FOSS models', async () => {
+    mockFetchModels.mockResolvedValueOnce(licenseModels())
+    const wrapper = await mountView()
+
+    // Two non-FOSS models → two notices; the FOSS model has none.
+    const notices = wrapper.findAll('.license-notice')
+    expect(notices).toHaveLength(2)
+  })
+
+  it('shows the license notice text and license name for a non-FOSS model', async () => {
+    mockFetchModels.mockResolvedValueOnce(licenseModels())
+    const wrapper = await mountView()
+
+    expect(wrapper.text()).toContain('Free for personal use; commercial use requires a separate license.')
+    expect(wrapper.text()).toContain('Fish Audio Research License')
+  })
+
+  it('renders the notice for non-FOSS models in both the available and unavailable lists', async () => {
+    mockFetchModels.mockResolvedValueOnce(licenseModels())
+    const wrapper = await mountView()
+
+    const available = wrapper.find('.model-list-available')
+    const unavailable = wrapper.find('.model-list-unavailable')
+    expect(available.find('.license-notice').exists()).toBe(true)
+    expect(unavailable.find('.license-notice').exists()).toBe(true)
+  })
+
+  it('does not render any license notice when every model is FOSS', async () => {
+    // sampleModels() are all FOSS
+    const wrapper = await mountView()
+    expect(wrapper.findAll('.license-notice')).toHaveLength(0)
+  })
+
+  it('falls back to a generic notice when a non-FOSS model lacks an explicit notice', async () => {
+    mockFetchModels.mockResolvedValueOnce([
+      {
+        model_id: 'nonfoss/no-notice',
+        name: 'No Notice Model',
+        is_cached: false,
+        is_loaded: false,
+        loader_available: true,
+        license: 'Custom Research License',
+        license_is_foss: false,
+        license_notice: null,
+      },
+    ])
+    const wrapper = await mountView()
+
+    const notice = wrapper.find('.license-notice')
+    expect(notice.exists()).toBe(true)
+    expect(notice.text()).toContain('Custom Research License')
+    expect(notice.text()).toContain('free for personal use')
   })
 })

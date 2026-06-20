@@ -30,6 +30,18 @@ const availableModels = computed(() => models.value.filter((m) => m.loader_avail
 /** Models whose adapter is not yet implemented — shown for visibility only. */
 const unavailableModels = computed(() => models.value.filter((m) => !m.loader_available))
 
+/**
+ * Fallback disclosure used only if a non-FOSS model is missing its notice
+ * (DEC-model-license-disclosure requires one, so this is defensive).
+ */
+const FALLBACK_LICENSE_NOTICE =
+  'Open-weight but not OSI open-source — free for personal use; commercial use requires a separate license.'
+
+/** Notice text to display for a non-FOSS model (DEC-model-license-disclosure). */
+function licenseNoticeText(model: Model): string {
+  return model.license_notice ?? FALLBACK_LICENSE_NOTICE
+}
+
 async function refresh() {
   loading.value = true
   error.value = null
@@ -170,6 +182,12 @@ function isDownloading(modelId: string): boolean {
               {{ loadingModelId === model.model_id ? 'Loading...' : 'Load' }}
             </button>
           </div>
+
+          <!-- License disclosure: shown for non-FOSS (research / non-commercial) models. -->
+          <p v-if="!model.license_is_foss" class="license-notice" role="note">
+            <span class="badge badge-license">{{ model.license }}</span>
+            <span class="license-notice-text">{{ licenseNoticeText(model) }}</span>
+          </p>
         </li>
       </ul>
     </section>
@@ -193,6 +211,12 @@ function isDownloading(modelId: string): boolean {
           <div class="model-actions">
             <span class="badge badge-no-adapter">No adapter</span>
           </div>
+
+          <!-- License disclosure: shown for non-FOSS (research / non-commercial) models. -->
+          <p v-if="!model.license_is_foss" class="license-notice" role="note">
+            <span class="badge badge-license">{{ model.license }}</span>
+            <span class="license-notice-text">{{ licenseNoticeText(model) }}</span>
+          </p>
         </li>
       </ul>
     </section>
@@ -293,6 +317,32 @@ function isDownloading(modelId: string): boolean {
 .badge-no-adapter {
   background: #fff3e0;
   color: #e65100;
+}
+
+.badge-license {
+  background: #ffe082;
+  color: #7a5c00;
+}
+
+.license-notice {
+  flex-basis: 100%;
+  width: 100%;
+  margin: 0.25rem 0 0;
+  padding: 0.5rem 0.75rem;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 4px;
+  color: #7a5c00;
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.license-notice-text {
+  flex: 1;
+  min-width: 12rem;
 }
 
 .model-actions {
