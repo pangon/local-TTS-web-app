@@ -54,6 +54,14 @@ _SAMPLE_RATE_DEFAULT = 24000
 # Companion audio tokenizer (codec) required by the processor.
 _AUDIO_TOKENIZER_ID = "OpenMOSS-Team/MOSS-Audio-Tokenizer"
 
+# Pinned model repo revision (HuggingFace commit). ``trust_remote_code`` pulls
+# the model's own Python from the repo; without a pin it silently tracks the
+# repo HEAD, which can introduce a newer-transformers requirement and break
+# loading (the architecture § Model-Specific Loading Requirements recommends
+# pinning a revision). This commit's remote code is compatible with the
+# transformers version this project pins.
+_MODEL_REVISION = "c7cd852d87aff71cab5bd2b9b05509cedc0ef1ba"
+
 # Default language used when none is supplied (DEC-default-italian-language).
 # This is an ISO 639-1 code, the convention spoken by the application layer.
 # MOSS-TTSD auto-detects the language from the text, so this is advisory only.
@@ -73,6 +81,34 @@ _SPEAKER_TAG_RE = re.compile(r"^\s*\[S[1-5]\]")
 # Default cap on generated audio tokens per call. The synthesizer feeds one
 # preprocessing line (sentence) per call, so this is ample headroom.
 _DEFAULT_MAX_NEW_TOKENS = 2000
+
+
+def _install_transformers_compat() -> None:
+    """Bridge the transformers 5.x ``PretrainedConfig`` → ``PreTrainedConfig`` rename.
+
+    MOSS-TTSD's companion audio tokenizer (``OpenMOSS-Team/MOSS-Audio-Tokenizer``,
+    loaded via ``codec_path``) imports ``PreTrainedConfig`` — the name introduced
+    when transformers 5.x renamed ``PretrainedConfig`` (the same class). On
+    transformers 4.x that new name is absent, so the codec's ``trust_remote_code``
+    import fails with ``cannot import name 'PreTrainedConfig'``. This idempotently
+    aliases the new name onto the existing class so the remote code loads.
+
+    The project baseline is transformers 5.x (``DEC-transformers-5x-baseline``,
+    required because the MOSS-TTSD model code also imports the 5.x
+    ``transformers.initialization`` module), where ``PreTrainedConfig`` already
+    exists — so this shim is a **defensive no-op** there, kept only to fail
+    gracefully if the adapter is ever run on an older transformers.
+    """
+    import transformers
+    from transformers import configuration_utils
+
+    if not hasattr(configuration_utils, "PreTrainedConfig") and hasattr(
+        configuration_utils, "PretrainedConfig"
+    ):
+        configuration_utils.PreTrainedConfig = configuration_utils.PretrainedConfig
+        # Some remote code imports the name from the top-level package too.
+        if not hasattr(transformers, "PreTrainedConfig"):
+            transformers.PreTrainedConfig = configuration_utils.PretrainedConfig
 
 
 class MOSSTTSDAdapter:
@@ -97,8 +133,15 @@ class MOSSTTSDAdapter:
         companion audio tokenizer (``codec_path``); the model is loaded with
         ``trust_remote_code=True`` and moved to *device* for GPU inference
         (``CON-gpu-inference``).  FlashAttention 2 is used when available,
-        falling back to the memory-efficient ``sdpa`` implementation.
+        falling back to the memory-efficient ``sdpa`` implementation. Both
+        ``from_pretrained`` calls pin ``_MODEL_REVISION`` so the remote code is
+        stable, and the transformers 5.x ``PreTrainedConfig`` rename is bridged
+        for the codec via ``_install_transformers_compat`` first.
         """
+        # Bridge the transformers 5.x config-class rename before any remote code
+        # (model or codec) is imported, otherwise the codec import fails on 4.x.
+        _install_transformers_compat()
+
         from transformers import AutoModel, AutoProcessor
 
         logger.info("Loading MOSS-TTSD model %s on %s", model_id, device)
@@ -109,6 +152,7 @@ class MOSSTTSDAdapter:
 
         processor = AutoProcessor.from_pretrained(
             model_id,
+            revision=_MODEL_REVISION,
             trust_remote_code=True,
             codec_path=_AUDIO_TOKENIZER_ID,
         )
@@ -119,6 +163,7 @@ class MOSSTTSDAdapter:
 
         model = AutoModel.from_pretrained(
             model_id,
+            revision=_MODEL_REVISION,
             trust_remote_code=True,
             attn_implementation=attn_impl,
             torch_dtype=dtype,

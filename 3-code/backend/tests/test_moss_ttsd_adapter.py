@@ -23,7 +23,9 @@ from local_tts.tts.adapters.moss_ttsd import (
     MOSSTTSDAdapter,
     _AUDIO_TOKENIZER_ID,
     _DEFAULT_LANGUAGE,
+    _MODEL_REVISION,
     _SAMPLE_RATE_DEFAULT,
+    _install_transformers_compat,
 )
 
 _MODEL_ID = "OpenMOSS-Team/MOSS-TTSD-v1.0"
@@ -124,11 +126,13 @@ class TestMOSSTTSDAdapterLoad:
 
         mock_proc_fp.assert_called_once_with(
             _MODEL_ID,
+            revision=_MODEL_REVISION,
             trust_remote_code=True,
             codec_path=_AUDIO_TOKENIZER_ID,
         )
         model_call = mock_model_fp.call_args
         assert model_call.args[0] == _MODEL_ID
+        assert model_call.kwargs["revision"] == _MODEL_REVISION
         assert model_call.kwargs["trust_remote_code"] is True
         assert model_call.kwargs["torch_dtype"] == torch.bfloat16
         assert model_call.kwargs["attn_implementation"] in ("sdpa", "flash_attention_2")
@@ -153,6 +157,50 @@ class TestMOSSTTSDAdapterLoad:
     def test_unload_when_not_loaded_is_safe(self):
         adapter = MOSSTTSDAdapter()
         adapter.unload()  # Should not raise
+
+
+# ---------------------------------------------------------------------------
+# transformers 5.x PretrainedConfig -> PreTrainedConfig compat bridge
+# ---------------------------------------------------------------------------
+
+class TestMOSSTTSDTransformersCompat:
+    """The companion audio tokenizer's remote code imports the transformers 5.x
+    name ``PreTrainedConfig``; on transformers 4.x the adapter aliases it onto
+    the existing ``PretrainedConfig`` class so the codec ``trust_remote_code``
+    import succeeds (the bug behind 'cannot import name PreTrainedConfig')."""
+
+    def test_install_makes_pretrainedconfig_importable(self):
+        _install_transformers_compat()
+        from transformers.configuration_utils import (  # noqa: F401
+            PretrainedConfig,
+            PreTrainedConfig,
+        )
+
+        # In 5.x they are the same (deprecated alias); in 4.x we alias them.
+        assert PreTrainedConfig is PretrainedConfig
+
+    def test_install_is_idempotent(self):
+        _install_transformers_compat()
+        _install_transformers_compat()  # second call must not raise
+        from transformers.configuration_utils import PreTrainedConfig
+
+        assert PreTrainedConfig is not None
+
+    def test_install_does_not_overwrite_existing(self):
+        from transformers import configuration_utils as cu
+
+        had = hasattr(cu, "PreTrainedConfig")
+        saved = getattr(cu, "PreTrainedConfig", None)
+        sentinel = object()
+        cu.PreTrainedConfig = sentinel
+        try:
+            _install_transformers_compat()
+            assert cu.PreTrainedConfig is sentinel
+        finally:
+            if had:
+                cu.PreTrainedConfig = saved
+            else:
+                cu.PreTrainedConfig = cu.PretrainedConfig
 
 
 # ---------------------------------------------------------------------------

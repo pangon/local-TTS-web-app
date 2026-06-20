@@ -28,6 +28,7 @@ This phase defines **how** we're building the system. Focus on architecture, dat
 | [DEC-text-preprocessing-pipeline](decisions/DEC-text-preprocessing-pipeline.md) | Modular Backend Text-Preprocessing Pipeline | When modifying the preprocessing pipeline structure, its stages, or its configuration model |
 | [DEC-preprocess-review-flow](decisions/DEC-preprocess-review-flow.md) | Synchronous Preprocess-then-Confirm Synthesis Flow | When modifying the preprocess/synthesis API contracts or the normalized-text review flow |
 | [DEC-model-license-disclosure](decisions/DEC-model-license-disclosure.md) | Permit Open-Weight Non-FOSS Models with Frontend License Disclosure | When adding a model to the Compatibility Table, defining model metadata, or changing the model-listing / `GET /models` contract |
+| [DEC-transformers-5x-baseline](decisions/DEC-transformers-5x-baseline.md) | Backend Baseline on transformers 5.x (drop qwen-tts / Qwen3-TTS adapter) | When adding a model to the Compatibility Table or choosing a model-loading library/approach (must be transformers-5.x-compatible) |
 
 ---
 

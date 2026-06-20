@@ -46,7 +46,7 @@ cd 3-code/backend
 pytest
 ```
 
-Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (now a JSON `{text, source_filename, voice?, language?}` contract — empty-text 400, no-model 409, disk preflight from text length, verbatim passthrough with no re-preprocessing), library service (audiobook/chapter persistence and chapter audio path resolution), the library API (list/get/delete with cascade cleanup and chapter audio streaming with HTTP Range support), the playback position API (two-level GET/PUT bookmark, defaults, 404/422 handling), SSE event wiring for job progress/completed/failed, the model adapter registry/protocol (`has_adapter`/`get_adapter`, `loader_available` flag), the Kokoro and Qwen3-TTS adapters (including ISO 639-1 → model-specific language-code mapping, e.g. `it`→`i`/`Italian`), and the text-preprocessing pipeline — the pipeline skeleton (Stage protocol + registry, Pipeline runner, language/model profile resolution, domain-dictionary loader), the five concrete stages in isolation (Unicode sanitization, layout repair, numeric/symbolic verbalization, abbreviation expansion, sentence segmentation — one sentence per line, run last), and the `POST /preprocess` endpoint (file or text input, validation/no-model errors, before/after counts, latency-bound smoke guards).
+Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (now a JSON `{text, source_filename, voice?, language?}` contract — empty-text 400, no-model 409, disk preflight from text length, verbatim passthrough with no re-preprocessing), library service (audiobook/chapter persistence and chapter audio path resolution), the library API (list/get/delete with cascade cleanup and chapter audio streaming with HTTP Range support), the playback position API (two-level GET/PUT bookmark, defaults, 404/422 handling), SSE event wiring for job progress/completed/failed, the model adapter registry/protocol (`has_adapter`/`get_adapter`, `loader_available` flag), the registered adapters — Kokoro (ISO 639-1 → model-specific code, e.g. `it`→`i`), VoxCPM2 and MOSS-TTSD (auto-detect language; MOSS-TTSD also covers the transformers 5.x `PreTrainedConfig` compat shim + model-revision pin) — plus the now-unregistered Qwen3-TTS adapter module (`DEC-transformers-5x-baseline`), and the text-preprocessing pipeline — the pipeline skeleton (Stage protocol + registry, Pipeline runner, language/model profile resolution, domain-dictionary loader), the five concrete stages in isolation (Unicode sanitization, layout repair, numeric/symbolic verbalization, abbreviation expansion, sentence segmentation — one sentence per line, run last), and the `POST /preprocess` endpoint (file or text input, validation/no-model errors, before/after counts, latency-bound smoke guards).
 
 ### Frontend Tests
 
@@ -212,14 +212,14 @@ Expected outcome: model loads onto GPU with VRAM validation.
 
 ### Phase 3.1: Model Adapter Abstraction & Loaders
 
-Phase 3.1 introduces the model adapter layer: each model in the compatible list is annotated with a `loader_available` flag indicating whether a concrete adapter is registered for it. Models **without** an adapter cannot be downloaded or loaded and are surfaced as such in the UI. Adapters currently implemented: **Kokoro-82M** (`hexgrad/Kokoro-82M`) and **Qwen3-TTS** (`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`).
+Phase 3.1 introduces the model adapter layer: each model in the compatible list is annotated with a `loader_available` flag indicating whether a concrete adapter is registered for it. Models **without** an adapter cannot be downloaded or loaded and are surfaced as such in the UI. Adapters currently registered: **Kokoro-82M** (`hexgrad/Kokoro-82M`), **VoxCPM2** (`openbmb/VoxCPM2`), and **MOSS-TTSD v1.0** (`OpenMOSS-Team/MOSS-TTSD-v1.0`). The **Qwen3-TTS** adapter (`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`) is currently **unregistered** — its `qwen-tts` package hard-pins `transformers==4.57.3`, incompatible with the `transformers>=5.5` baseline (`DEC-transformers-5x-baseline`); it therefore reports `loader_available=false`.
 
 #### 3.1.1 `loader_available` exposed by the API
 
 1. Start the backend.
 2. Request the model list: `curl http://127.0.0.1:8000/api/v1/models`.
 3. Verify each entry includes a `loader_available` boolean field.
-4. Verify `loader_available` is `true` for `hexgrad/Kokoro-82M` and `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`, and `false` for models without an adapter (e.g. `coqui/XTTS-v2`, `ResembleAI/chatterbox`).
+4. Verify `loader_available` is `true` for `hexgrad/Kokoro-82M`, `openbmb/VoxCPM2`, and `OpenMOSS-Team/MOSS-TTSD-v1.0`, and `false` for models without a registered adapter (e.g. `coqui/XTTS-v2`, `ResembleAI/chatterbox`, and `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` per `DEC-transformers-5x-baseline`).
 
 Expected outcome: the `GET /models` response reports adapter availability per model.
 
@@ -234,7 +234,7 @@ Expected outcome: models lacking an adapter are clearly marked and their actions
 
 #### 3.1.3 Models with an adapter remain fully actionable
 
-1. On the Models page, find an adapter-backed model (Kokoro-82M or Qwen3-TTS).
+1. On the Models page, find an adapter-backed model (Kokoro-82M or VoxCPM2).
 2. Verify **no** "No adapter" badge is shown.
 3. Verify the Download button appears when the model is not cached, and the Load button appears once cached (per Phase 3 tests 3.3 and 3.4).
 
@@ -250,14 +250,16 @@ Expected outcome: adapter-backed models expose the normal download/load workflow
 
 Expected outcome: the Kokoro adapter performs actual TTS inference through the `ModelAdapter` interface.
 
-#### 3.1.5 Adapter-driven inference (Qwen3-TTS)
+#### 3.1.5 Adapter-driven inference (VoxCPM2)
 
-**Prerequisite:** Download and load `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` first.
+**Prerequisite:** Download and load `openbmb/VoxCPM2` first (~8 GB VRAM; 48 kHz output). VoxCPM2 auto-detects the language from the text, defaulting to Italian per `DEC-default-italian-language`.
 
-1. With Qwen3-TTS loaded, run a short synthesis.
-2. Verify synthesis produces real audio (intelligible speech), using the Italian default per `DEC-default-italian-language`.
+1. With VoxCPM2 loaded, run a short synthesis.
+2. Verify synthesis produces real audio (intelligible speech).
 
-Expected outcome: the Qwen3-TTS adapter performs actual TTS inference through the `ModelAdapter` interface.
+Expected outcome: the VoxCPM2 adapter performs actual TTS inference through the `ModelAdapter` interface.
+
+> **MOSS-TTSD v1.0** (`OpenMOSS-Team/MOSS-TTSD-v1.0`) is also registered (Apache-2.0, ~19 GB VRAM, transformers ≥5.5). It is a dialogue/multi-speaker model used here for single-voice narration (each input is wrapped as a single `[S1]` turn); validate it on a GPU with sufficient VRAM. The **Qwen3-TTS** adapter is unregistered (`DEC-transformers-5x-baseline`) and cannot be loaded.
 
 ### Phase 4: Audiobook Synthesis End-to-End
 
@@ -649,12 +651,13 @@ Not applicable — manual testing does not modify production state. If the appli
 | API calls return 404 in dev mode | Ensure the backend is running on port 8000 before starting the Vite dev server |
 | Database not created | Check write permissions in the data directory; check `LOCAL_TTS_DATA_DIR` env var |
 | "No model loaded" when submitting synthesis | Load a model first on the Models page (Phase 3) |
-| `Failed to synthesize text segment: Unsupported languages: ['it']` (or similar) | Expected to be handled: the app passes the ISO 639-1 code (`it`) and each adapter translates it to its model identifier (Qwen3 `Italian`, Kokoro `i`). If you see this, confirm the loaded model's adapter maps the requested ISO code in `_resolve_language` (Qwen3) / `_resolve_lang_code` (Kokoro); a genuinely unsupported language raises a clear `ValueError` listing the accepted codes |
+| `Failed to synthesize text segment: Unsupported languages: ['it']` (or similar) | Expected to be handled: the app passes the ISO 639-1 code (`it`) and each adapter maps it to its model identifier (Kokoro `i` via `_resolve_lang_code`) or validates it as advisory for auto-detect models (VoxCPM2 / MOSS-TTSD `_resolve_language`, which do not forward it). If you see this, confirm the loaded model's adapter handles the requested ISO code; a genuinely unsupported language raises a clear `ValueError` listing the accepted codes |
 | Synthesis job stays "queued" indefinitely | Check backend logs for worker thread errors; ensure the job service started correctly |
 | Progress bar not updating | Verify SSE connection is active in DevTools Network tab; check for `job-progress` events |
 | "Insufficient disk space" error | Free up disk space or use a smaller text file; the estimate is ~0.002 MB per character |
 | Audiobook title has underscores/hyphens | Expected: title is derived from filename with `-` and `_` replaced by spaces |
-| Model shows "No adapter" badge with no Download/Load buttons | Expected: no adapter is registered yet for that model. Use an adapter-backed model (Kokoro-82M or Qwen3-TTS), or implement the corresponding `TASK-loader-*` adapter |
+| Model shows "No adapter" badge with no Download/Load buttons | Expected: no adapter is registered for that model. Use an adapter-backed model (Kokoro-82M, VoxCPM2, or MOSS-TTSD), or implement the corresponding `TASK-loader-*` adapter. Note Qwen3-TTS is intentionally unregistered (`DEC-transformers-5x-baseline`) |
+| MOSS-TTSD load fails with `cannot import name 'PreTrainedConfig'` | The backend baseline is `transformers>=5.5` (`DEC-transformers-5x-baseline`); this error means an older transformers (<5.0) is installed. Re-run `pip install -e ".[dev]"` in the backend venv so transformers 5.x is installed |
 | `loader_available` is `false` for a model you expect to work | Confirm the adapter is registered in `_ADAPTER_REGISTRY` (`src/local_tts/tts/adapters/__init__.py`); restart the backend after registering |
 | Kokoro produces garbled or English-only audio for non-English text | Ensure `espeak-ng` is installed and on PATH (`sudo apt-get install espeak-ng`) |
 | Library view is empty after a successful synthesis | Confirm the job completed (Phase 4 test 4.5) and `GET /api/v1/audiobooks` returns the entry; check the data directory (`LOCAL_TTS_DATA_DIR`) matches between synthesis and the running backend |
