@@ -201,6 +201,22 @@ class TestBoundaryPreservation:
         text = "Spesa:\n- mele\n- pere\n- arance"
         assert _run(text) == "Spesa:\n- mele\n- pere\n- arance"
 
+    def test_bare_number_line_kept_standalone_not_glued(self):
+        # A chapter/section number on its own line between a title and the body
+        # must not be glued onto the surrounding lines (it is structural, not
+        # prose). It is preserved on its own line — not stripped (that is only
+        # for a number isolated by blank lines).
+        text = "Gli psicostorici\n1\nHARI SELDON nato a Helicon."
+        assert _run(text) == "Gli psicostorici\n1\nHARI SELDON nato a Helicon."
+
+    def test_bare_number_line_within_prose_block_flushes_buffer(self):
+        # The title before the number is flushed onto its own line rather than
+        # joined with the number.
+        text = "Titolo della sezione\n7\nIl corpo del testo continua qui."
+        assert _run(text) == (
+            "Titolo della sezione\n7\nIl corpo del testo continua qui."
+        )
+
     def test_chapter_detection_survives_reflow(self):
         # Whole-document case: headings + wrapped body across blank-lined
         # paragraphs. After repair the Chapter Parser must still find both

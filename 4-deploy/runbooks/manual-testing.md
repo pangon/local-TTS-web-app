@@ -46,7 +46,7 @@ cd 3-code/backend
 pytest
 ```
 
-Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (now a JSON `{text, source_filename, voice?, language?}` contract — empty-text 400, no-model 409, disk preflight from text length, verbatim passthrough with no re-preprocessing), library service (audiobook/chapter persistence and chapter audio path resolution), the library API (list/get/delete with cascade cleanup and chapter audio streaming with HTTP Range support), the playback position API (two-level GET/PUT bookmark, defaults, 404/422 handling), SSE event wiring for job progress/completed/failed, the model adapter registry/protocol (`has_adapter`/`get_adapter`, `loader_available` flag), the Kokoro and Qwen3-TTS adapters (including ISO 639-1 → model-specific language-code mapping, e.g. `it`→`i`/`Italian`), and the text-preprocessing pipeline — the pipeline skeleton (Stage protocol + registry, Pipeline runner, language/model profile resolution, domain-dictionary loader), the four concrete stages in isolation (Unicode sanitization, layout repair, numeric/symbolic verbalization, abbreviation expansion), and the `POST /preprocess` endpoint (file or text input, validation/no-model errors, before/after counts, latency-bound smoke guards).
+Expected outcome: all tests pass. Tests cover GPU validator, model loader, chapter parser, synthesizer, TTS engine interface, SSE endpoint, model service/API, database initialization, static file serving, startup checks, app scaffold, job service, synthesis job API (now a JSON `{text, source_filename, voice?, language?}` contract — empty-text 400, no-model 409, disk preflight from text length, verbatim passthrough with no re-preprocessing), library service (audiobook/chapter persistence and chapter audio path resolution), the library API (list/get/delete with cascade cleanup and chapter audio streaming with HTTP Range support), the playback position API (two-level GET/PUT bookmark, defaults, 404/422 handling), SSE event wiring for job progress/completed/failed, the model adapter registry/protocol (`has_adapter`/`get_adapter`, `loader_available` flag), the Kokoro and Qwen3-TTS adapters (including ISO 639-1 → model-specific language-code mapping, e.g. `it`→`i`/`Italian`), and the text-preprocessing pipeline — the pipeline skeleton (Stage protocol + registry, Pipeline runner, language/model profile resolution, domain-dictionary loader), the five concrete stages in isolation (Unicode sanitization, layout repair, numeric/symbolic verbalization, abbreviation expansion, sentence segmentation — one sentence per line, run last), and the `POST /preprocess` endpoint (file or text input, validation/no-model errors, before/after counts, latency-bound smoke guards).
 
 ### Frontend Tests
 
@@ -497,7 +497,9 @@ Expected outcome: malformed input is rejected with 400 before synthesis; preproc
 
 Expected outcome: invisible/control characters, NBSP/whitespace variants, dash/quote variants, and emoji are normalized or removed.
 
-#### 5.1.5 Layout repair stage (REQ-F-text-layout-repair)
+#### 5.1.5 Layout repair & sentence segmentation stages (REQ-F-text-layout-repair)
+
+Two stages cooperate on line structure: **layout repair** (stage 2) reflows soft-wrapped sentence fragments back together, and **sentence segmentation** (stage 5, the last) then puts each sentence on its own line. Sentence segmentation runs after numbers/abbreviations are expanded so a sentence-ending period is not confused with a thousands separator (`11.988`) or an abbreviation dot.
 
 1. Build an input that mimics PDF-to-text breakage:
    ```
@@ -513,9 +515,16 @@ Expected outcome: invisible/control characters, NBSP/whitespace variants, dash/q
    (a word hyphenated across a line break, a sentence wrapped mid-line, an isolated page number `12`, a blank-line paragraph boundary, and a chapter heading).
 2. Preprocess it and inspect `normalized_text`.
 3. Verify: `para-\ngrafo` is de-hyphenated to `paragrafo`; the wrapped sentence is reflowed onto one line; the isolated `12` page number is stripped; the blank-line paragraph boundary is preserved; and `CAPITOLO 2` remains on its own physical line.
-4. **Chapter boundaries survive:** run the normalized text through synthesis (5.1.10) and confirm the resulting audiobook still splits into the expected chapters (layout repair runs before chapter detection and must not defeat it).
+4. **Structural lines not glued:** preprocess book-style front matter with no blank lines, e.g.
+   ```
+   Gli psicostorici
+   1
+   HARI SELDON nato nell'anno 11.988, morto nel 12.069. Nel calendario in uso.
+   ```
+   Verify the title `Gli psicostorici` and the bare chapter number (`1`→`uno`) each stay on their **own** line (a bare-number line is structural and must not be glued onto the surrounding text), and that the body is split **one sentence per line** (`…morto nel dodicimila…nove.` and `Nel calendario in uso.` on separate lines) with `11.988`/`12.069` verbalized, not mis-split on their internal dots.
+5. **Chapter boundaries survive:** run the normalized text through synthesis (5.1.10) and confirm the resulting audiobook still splits into the expected chapters (layout repair runs before chapter detection and must not defeat it).
 
-Expected outcome: end-of-line hyphenation is resolved, spurious wraps are reflowed, isolated page numbers are stripped, and paragraph/chapter boundaries are preserved so chapter detection still functions.
+Expected outcome: end-of-line hyphenation is resolved, spurious wraps are reflowed, isolated page numbers are stripped, structural lines (titles, bare chapter numbers, headings) are kept standalone, the body is segmented one sentence per line, and paragraph/chapter boundaries are preserved so chapter detection still functions.
 
 #### 5.1.6 Numeric & symbolic verbalization stage (Italian) (REQ-F-text-numeric-symbolic-verbalization)
 

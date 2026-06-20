@@ -32,3 +32,7 @@ __pycache__/
 # dist/
 # target/
 # build/
+
+# Root-level scratch tests only — anchored with a leading slash so component
+# test suites (e.g. 3-code/backend/tests/) are NOT ignored.
+/tests/

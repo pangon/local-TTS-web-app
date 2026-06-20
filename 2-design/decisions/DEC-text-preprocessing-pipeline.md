@@ -8,7 +8,7 @@
 
 **Source**: [REQ-MNT-preprocessing-pipeline](../../1-objectives/requirements/REQ-MNT-preprocessing-pipeline.md), [GOAL-text-normalization](../../1-objectives/goals/GOAL-text-normalization.md), [REQ-F-text-unicode-sanitization](../../1-objectives/requirements/REQ-F-text-unicode-sanitization.md), [REQ-F-text-layout-repair](../../1-objectives/requirements/REQ-F-text-layout-repair.md), [REQ-F-text-numeric-symbolic-verbalization](../../1-objectives/requirements/REQ-F-text-numeric-symbolic-verbalization.md), [REQ-F-abbreviation-expansion](../../1-objectives/requirements/REQ-F-abbreviation-expansion.md)
 
-**Last updated**: 2026-06-19
+**Last updated**: 2026-06-20
 
 ## Context
 
@@ -24,6 +24,7 @@ The service runs a **modular pipeline of discrete, independently unit-testable s
 2. **Layout repair** — resolve end-of-line hyphenation; reflow sentences split across hard line breaks; strip isolated page numbers and standalone layout fragments; normalize irregular whitespace; **preserve genuine paragraph and chapter boundaries** so chapter detection (`REQ-F-chapter-split-output`) still functions (`REQ-F-text-layout-repair`).
 3. **Numeric & symbolic verbalization** — spell out cardinals/ordinals, dates, percentages, currency, and common symbols, language-aware (`REQ-F-text-numeric-symbolic-verbalization`).
 4. **Abbreviation expansion** — verbalize common abbreviations/acronyms from a language-specific built-in set; apply an optional domain dictionary when supplied (`REQ-F-abbreviation-expansion`).
+5. **Sentence segmentation** — put each sentence on its own line so the reviewed text is segmented into the sentences the author intended and mirrors the synthesizer's own sentence chunking (`REQ-F-text-layout-repair`, `REQ-USA-normalized-text-review`). This runs **last**, after numeric/symbolic verbalization and abbreviation expansion, so a sentence-ending period is no longer ambiguous with a thousands separator (`11.988`) or an abbreviation dot (`E.F.`, `sig.`). It splits — the inverse of layout repair's reflow, which rejoins soft-wrapped fragments — while preserving blank-line paragraph boundaries and already-standalone structural lines (headings, list items, bare numbers).
 
 The pipeline is configurable along two axes (`REQ-MNT-preprocessing-pipeline`):
 

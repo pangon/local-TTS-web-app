@@ -27,6 +27,7 @@ STAGE_UNICODE_SANITIZATION = "unicode_sanitization"
 STAGE_LAYOUT_REPAIR = "layout_repair"
 STAGE_NUMERIC_SYMBOLIC_VERBALIZATION = "numeric_symbolic_verbalization"
 STAGE_ABBREVIATION_EXPANSION = "abbreviation_expansion"
+STAGE_SENTENCE_SEGMENTATION = "sentence_segmentation"
 
 
 @dataclass(frozen=True)

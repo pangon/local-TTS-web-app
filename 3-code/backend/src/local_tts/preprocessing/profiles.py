@@ -29,6 +29,7 @@ from local_tts.preprocessing.stages import (
     STAGE_ABBREVIATION_EXPANSION,
     STAGE_LAYOUT_REPAIR,
     STAGE_NUMERIC_SYMBOLIC_VERBALIZATION,
+    STAGE_SENTENCE_SEGMENTATION,
     STAGE_UNICODE_SANITIZATION,
     has_stage,
 )
@@ -67,6 +68,11 @@ DEFAULT_STAGE_ORDER: tuple[str, ...] = (
     STAGE_LAYOUT_REPAIR,
     STAGE_NUMERIC_SYMBOLIC_VERBALIZATION,
     STAGE_ABBREVIATION_EXPANSION,
+    # Sentence segmentation runs last, after numbers and abbreviations have
+    # been expanded, so sentence-ending periods are no longer confused with
+    # thousands separators (``11.988``) or abbreviation dots (``E.F.``,
+    # ``sig.``) when splitting one sentence per line.
+    STAGE_SENTENCE_SEGMENTATION,
 )
 
 

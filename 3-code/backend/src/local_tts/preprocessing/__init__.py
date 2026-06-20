@@ -43,6 +43,7 @@ from local_tts.preprocessing.stages import (
     STAGE_ABBREVIATION_EXPANSION,
     STAGE_LAYOUT_REPAIR,
     STAGE_NUMERIC_SYMBOLIC_VERBALIZATION,
+    STAGE_SENTENCE_SEGMENTATION,
     STAGE_UNICODE_SANITIZATION,
     Stage,
     StageConfig,
@@ -58,6 +59,9 @@ from local_tts.preprocessing.layout_repair import LayoutRepairStage
 from local_tts.preprocessing.numeric_symbolic_verbalization import (
     BUILTIN_LANGUAGE_DATA as _NUMERIC_LANGUAGE_DATA,
     NumericSymbolicVerbalizationStage,
+)
+from local_tts.preprocessing.sentence_segmentation import (
+    SentenceSegmentationStage,
 )
 from local_tts.preprocessing.unicode_sanitization import (
     BUILTIN_LANGUAGE_DATA as _UNICODE_LANGUAGE_DATA,
@@ -89,6 +93,11 @@ register_stage(AbbreviationExpansionStage)
 for _language, _data in _ABBREVIATION_LANGUAGE_DATA.items():
     register_language_data(_language, _data)
 
+# Sentence segmentation carries no language-specific data (sentence
+# terminators are universal here); it registers the stage alone and runs last
+# so numbers/abbreviations are already expanded before sentences are split.
+register_stage(SentenceSegmentationStage)
+
 __all__ = [
     "PreprocessingService",
     "PreprocessResult",
@@ -105,10 +114,12 @@ __all__ = [
     "STAGE_LAYOUT_REPAIR",
     "STAGE_NUMERIC_SYMBOLIC_VERBALIZATION",
     "STAGE_ABBREVIATION_EXPANSION",
+    "STAGE_SENTENCE_SEGMENTATION",
     "UnicodeSanitizationStage",
     "LayoutRepairStage",
     "NumericSymbolicVerbalizationStage",
     "AbbreviationExpansionStage",
+    "SentenceSegmentationStage",
     "register_stage",
     "get_stage",
     "has_stage",

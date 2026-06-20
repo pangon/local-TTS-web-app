@@ -120,6 +120,7 @@ class TestModelProfile:
             "layout_repair",
             "numeric_symbolic_verbalization",
             "abbreviation_expansion",
+            "sentence_segmentation",
         )
 
     def test_default_profile_empty_when_no_stages_registered(self):

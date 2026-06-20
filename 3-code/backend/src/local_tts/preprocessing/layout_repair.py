@@ -14,9 +14,11 @@ detection (``DEC-text-preprocessing-pipeline``).  In order, the stage:
    nothing but a page number (the "surrounded by blank lines" case).
 4. Reflows the soft line breaks inside each block: line fragments of one
    sentence are rejoined (with a single space), and end-of-line hyphenation is
-   resolved (``exam-\\nple`` → ``example``).  Heading-like and list-item lines
-   are kept on their own line so chapter detection (``REQ-F-chapter-split-output``)
-   still functions and list structure survives.
+   resolved (``exam-\\nple`` → ``example``).  Heading-like, list-item, and
+   bare-number lines (e.g. a chapter number sitting on its own line) are kept
+   on their own line so chapter detection (``REQ-F-chapter-split-output``)
+   still functions and structural lines are not glued onto the surrounding
+   text.
 5. Re-emits blocks separated by a single blank line, collapsing runs of blank
    lines to one consistent paragraph boundary.
 
@@ -102,6 +104,14 @@ _HEADING_RE = re.compile(
 _LIST_ITEM_RE = re.compile(
     r"^(?:[-*•‣◦·]\s+|\d{1,3}[.)]\s+)"
 )
+
+# A bare-number line: a line that is nothing but a number (optionally decorated
+# with brackets/dashes), e.g. a chapter or section number sitting on its own
+# line between a title and the body.  Such a line is structural, not prose, so
+# reflow must not glue it onto the surrounding lines.  Unlike a page-number
+# *block* (a number isolated by blank lines, stripped entirely), a bare-number
+# line inside a text block is preserved on its own line rather than removed.
+_BARE_NUMBER_RE = re.compile(r"^[\[\(\-–—\s]*\d{1,4}[\s\]\).\-–—]*$")
 
 
 class LayoutRepairStage:
@@ -194,7 +204,11 @@ class LayoutRepairStage:
 
         for line in block:
             line = line.strip()
-            if _HEADING_RE.match(line) or _LIST_ITEM_RE.match(line):
+            if (
+                _HEADING_RE.match(line)
+                or _LIST_ITEM_RE.match(line)
+                or _BARE_NUMBER_RE.match(line)
+            ):
                 if buffer:
                     physical.append(buffer)
                     buffer = ""
