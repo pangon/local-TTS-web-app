@@ -25,6 +25,11 @@ const { on, off } = useSSE()
 
 const loadedModel = computed(() => models.value.find((m) => m.is_loaded) ?? null)
 
+/** Models with an implemented adapter — downloadable and loadable. */
+const availableModels = computed(() => models.value.filter((m) => m.loader_available))
+/** Models whose adapter is not yet implemented — shown for visibility only. */
+const unavailableModels = computed(() => models.value.filter((m) => !m.loader_available))
+
 async function refresh() {
   loading.value = true
   error.value = null
@@ -120,52 +125,77 @@ function isDownloading(modelId: string): boolean {
       Currently loaded: <strong>{{ loadedModel.name }}</strong>
     </div>
 
-    <ul v-if="models.length > 0" class="model-list">
-      <li v-for="model in models" :key="model.model_id" class="model-item">
-        <div class="model-info">
-          <span class="model-name">{{ model.name }}</span>
-          <span class="model-id">{{ model.model_id }}</span>
-          <span v-if="model.is_loaded" class="badge badge-loaded">Loaded</span>
-          <span v-else-if="model.is_cached" class="badge badge-cached">Cached</span>
-          <span v-else class="badge badge-remote">Not cached</span>
-        </div>
-
-        <div class="model-actions">
-          <span v-if="!model.loader_available" class="badge badge-no-adapter">No adapter</span>
-
-          <!-- Download button: shown when not cached, has adapter, and not currently downloading -->
-          <button
-            v-if="model.loader_available && !model.is_cached && !isDownloading(model.model_id)"
-            @click="startDownload(model.model_id)"
-          >
-            Download
-          </button>
-
-          <!-- Download progress -->
-          <div v-if="isDownloading(model.model_id)" class="progress-container">
-            <progress
-              :value="downloadProgress[model.model_id]"
-              max="100"
-            ></progress>
-            <span class="progress-text">{{ downloadProgress[model.model_id] }}%</span>
+    <!-- Models with an implemented adapter: downloadable and loadable. -->
+    <section v-if="availableModels.length > 0" class="model-section model-section-available">
+      <h2>Available models</h2>
+      <ul class="model-list model-list-available">
+        <li v-for="model in availableModels" :key="model.model_id" class="model-item">
+          <div class="model-info">
+            <span class="model-name">{{ model.name }}</span>
+            <span class="model-id">{{ model.model_id }}</span>
+            <span v-if="model.is_loaded" class="badge badge-loaded">Loaded</span>
+            <span v-else-if="model.is_cached" class="badge badge-cached">Cached</span>
+            <span v-else class="badge badge-remote">Not cached</span>
           </div>
 
-          <!-- Download error -->
-          <p v-if="downloadErrors[model.model_id]" class="error">
-            {{ downloadErrors[model.model_id] }}
-          </p>
+          <div class="model-actions">
+            <!-- Download button: shown when not cached and not currently downloading -->
+            <button
+              v-if="!model.is_cached && !isDownloading(model.model_id)"
+              @click="startDownload(model.model_id)"
+            >
+              Download
+            </button>
 
-          <!-- Load button: shown when cached, has adapter, but not loaded -->
-          <button
-            v-if="model.loader_available && model.is_cached && !model.is_loaded"
-            :disabled="loadingModelId !== null"
-            @click="startLoad(model.model_id)"
-          >
-            {{ loadingModelId === model.model_id ? 'Loading...' : 'Load' }}
-          </button>
-        </div>
-      </li>
-    </ul>
+            <!-- Download progress -->
+            <div v-if="isDownloading(model.model_id)" class="progress-container">
+              <progress
+                :value="downloadProgress[model.model_id]"
+                max="100"
+              ></progress>
+              <span class="progress-text">{{ downloadProgress[model.model_id] }}%</span>
+            </div>
+
+            <!-- Download error -->
+            <p v-if="downloadErrors[model.model_id]" class="error">
+              {{ downloadErrors[model.model_id] }}
+            </p>
+
+            <!-- Load button: shown when cached but not loaded -->
+            <button
+              v-if="model.is_cached && !model.is_loaded"
+              :disabled="loadingModelId !== null"
+              @click="startLoad(model.model_id)"
+            >
+              {{ loadingModelId === model.model_id ? 'Loading...' : 'Load' }}
+            </button>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Models without an adapter yet: listed for visibility; download/load unavailable. -->
+    <section v-if="unavailableModels.length > 0" class="model-section model-section-unavailable">
+      <h2>Adapter not yet available</h2>
+      <p class="section-hint">
+        These models are listed for visibility. Download and load become available once an
+        adapter is implemented.
+      </p>
+      <ul class="model-list model-list-unavailable">
+        <li v-for="model in unavailableModels" :key="model.model_id" class="model-item">
+          <div class="model-info">
+            <span class="model-name">{{ model.name }}</span>
+            <span class="model-id">{{ model.model_id }}</span>
+            <span v-if="model.is_cached" class="badge badge-cached">Cached</span>
+            <span v-else class="badge badge-remote">Not cached</span>
+          </div>
+
+          <div class="model-actions">
+            <span class="badge badge-no-adapter">No adapter</span>
+          </div>
+        </li>
+      </ul>
+    </section>
 
     <p v-if="!loading && models.length === 0 && !error">No models available.</p>
   </div>
@@ -189,9 +219,25 @@ function isDownloading(modelId: string): boolean {
   margin-bottom: 1rem;
 }
 
+.model-section {
+  margin-bottom: 1.5rem;
+}
+
+.model-section h2 {
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-hint {
+  color: #666;
+  font-size: 0.875rem;
+  margin: 0 0 0.5rem;
+}
+
 .model-list {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 .model-item {

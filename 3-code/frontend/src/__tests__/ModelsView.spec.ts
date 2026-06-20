@@ -40,6 +40,16 @@ function sampleModels(): Model[] {
   ]
 }
 
+/** Mixed set: two models with an adapter, two without (distinct names to avoid substring clashes). */
+function mixedModels(): Model[] {
+  return [
+    { model_id: 'with/sigma-cached', name: 'Sigma Cached', is_cached: true, is_loaded: false, loader_available: true },
+    { model_id: 'with/sigma-remote', name: 'Sigma Remote', is_cached: false, is_loaded: false, loader_available: true },
+    { model_id: 'no/omega-cached', name: 'Omega Cached', is_cached: true, is_loaded: false, loader_available: false },
+    { model_id: 'no/omega-remote', name: 'Omega Remote', is_cached: false, is_loaded: false, loader_available: false },
+  ]
+}
+
 async function mountView() {
   const wrapper = mount(ModelsView)
   await flushPromises()
@@ -217,5 +227,82 @@ describe('ModelsView', () => {
     const loadingBtn = wrapper.findAll('button').find((b) => b.text() === 'Loading...')
     expect(loadingBtn).toBeDefined()
     expect(loadingBtn!.attributes('disabled')).toBeDefined()
+  })
+})
+
+describe('ModelsView adapter-availability grouping', () => {
+  it('splits models into an available list and an adapter-not-yet-available list', async () => {
+    mockFetchModels.mockResolvedValueOnce(mixedModels())
+    const wrapper = await mountView()
+
+    const available = wrapper.find('.model-list-available')
+    const unavailable = wrapper.find('.model-list-unavailable')
+    expect(available.exists()).toBe(true)
+    expect(unavailable.exists()).toBe(true)
+
+    const availableItems = available.findAll('.model-item')
+    const unavailableItems = unavailable.findAll('.model-item')
+    expect(availableItems).toHaveLength(2)
+    expect(unavailableItems).toHaveLength(2)
+
+    expect(available.text()).toContain('Sigma Cached')
+    expect(available.text()).toContain('Sigma Remote')
+    expect(available.text()).not.toContain('Omega')
+
+    expect(unavailable.text()).toContain('Omega Cached')
+    expect(unavailable.text()).toContain('Omega Remote')
+    expect(unavailable.text()).not.toContain('Sigma')
+  })
+
+  it('renders the available list before the adapter-not-yet-available list', async () => {
+    mockFetchModels.mockResolvedValueOnce(mixedModels())
+    const wrapper = await mountView()
+
+    const sections = wrapper.findAll('.model-section')
+    expect(sections).toHaveLength(2)
+    expect(sections[0]!.classes()).toContain('model-section-available')
+    expect(sections[1]!.classes()).toContain('model-section-unavailable')
+  })
+
+  it('does not show Download or Load buttons for models without an adapter', async () => {
+    mockFetchModels.mockResolvedValueOnce(mixedModels())
+    const wrapper = await mountView()
+
+    const unavailable = wrapper.find('.model-list-unavailable')
+    expect(unavailable.findAll('button')).toHaveLength(0)
+    // Only the adapter-backed cached model offers a Load button (the adapterless one does not)
+    const loadButtons = wrapper.findAll('button').filter((b) => b.text() === 'Load')
+    expect(loadButtons).toHaveLength(1)
+    // Only the adapter-backed remote model offers a Download button (the adapterless one does not)
+    const downloadButtons = wrapper.findAll('button').filter((b) => b.text() === 'Download')
+    expect(downloadButtons).toHaveLength(1)
+  })
+
+  it('marks adapterless models with a No adapter badge and keeps their cache status', async () => {
+    mockFetchModels.mockResolvedValueOnce(mixedModels())
+    const wrapper = await mountView()
+
+    const unavailable = wrapper.find('.model-list-unavailable')
+    const noAdapterBadges = unavailable.findAll('.badge-no-adapter')
+    expect(noAdapterBadges).toHaveLength(2)
+    expect(unavailable.find('.badge-cached').exists()).toBe(true)
+    expect(unavailable.find('.badge-remote').exists()).toBe(true)
+  })
+
+  it('hides the adapter-not-yet-available section when every model has an adapter', async () => {
+    // sampleModels() are all loader_available: true
+    const wrapper = await mountView()
+    expect(wrapper.find('.model-section-available').exists()).toBe(true)
+    expect(wrapper.find('.model-section-unavailable').exists()).toBe(false)
+  })
+
+  it('hides the available section when no model has an adapter', async () => {
+    mockFetchModels.mockResolvedValueOnce([
+      { model_id: 'no/adapter', name: 'No Adapter', is_cached: false, is_loaded: false, loader_available: false },
+    ])
+    const wrapper = await mountView()
+    expect(wrapper.find('.model-section-available').exists()).toBe(false)
+    expect(wrapper.find('.model-section-unavailable').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('No models available')
   })
 })
