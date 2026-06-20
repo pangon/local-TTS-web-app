@@ -103,7 +103,9 @@ class TestVoxCPM2AdapterLoad:
             adapter = VoxCPM2Adapter()
             adapter.load("openbmb/VoxCPM2", "cuda")
 
-        mock_voxcpm_cls.from_pretrained.assert_called_once_with("openbmb/VoxCPM2")
+        mock_voxcpm_cls.from_pretrained.assert_called_once_with(
+            "openbmb/VoxCPM2", device="cuda"
+        )
         assert adapter._model is mock_instance
         assert adapter._device == "cuda"
 

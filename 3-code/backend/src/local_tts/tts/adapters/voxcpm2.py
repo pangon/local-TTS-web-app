@@ -57,14 +57,14 @@ class VoxCPM2Adapter:
         """Load VoxCPM2 onto *device* via ``VoxCPM.from_pretrained``.
 
         The model weights are downloaded/cached by HuggingFace Hub on first
-        use.  ``VoxCPM`` places the model on CUDA automatically when a GPU is
-        available; *device* is recorded for diagnostics.
+        use.  The chosen *device* (e.g. ``"cuda"``) is passed through so
+        inference runs on the GPU (``CON-gpu-inference``).
         """
         from voxcpm import VoxCPM
 
-        logger.info("Loading VoxCPM2 model %s (target device %s)", model_id, device)
+        logger.info("Loading VoxCPM2 model %s on %s", model_id, device)
         self._device = device
-        self._model = VoxCPM.from_pretrained(model_id)
+        self._model = VoxCPM.from_pretrained(model_id, device=device)
         logger.info("VoxCPM2 model loaded successfully")
 
     def synthesize(self, text: str, **kwargs: Any) -> np.ndarray:
