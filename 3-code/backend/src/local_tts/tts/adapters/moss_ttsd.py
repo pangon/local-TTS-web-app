@@ -54,12 +54,16 @@ _SAMPLE_RATE_DEFAULT = 24000
 # Companion audio tokenizer (codec) required by the processor.
 _AUDIO_TOKENIZER_ID = "OpenMOSS-Team/MOSS-Audio-Tokenizer"
 
-# Pinned model repo revision (HuggingFace commit). ``trust_remote_code`` pulls
-# the model's own Python from the repo; without a pin it silently tracks the
-# repo HEAD, which can introduce a newer-transformers requirement and break
-# loading (the architecture § Model-Specific Loading Requirements recommends
-# pinning a revision). This commit's remote code is compatible with the
-# transformers version this project pins.
+# Last-known-good model repo commit, kept for reference only — it is **not**
+# passed as ``revision``. The model's own ``AutoProcessor.from_pretrained``
+# forwards every extra kwarg (including ``revision``) into the companion
+# codec's ``AutoModel.from_pretrained`` (see ``processing_moss_tts.py``), but
+# the codec lives in a **different** repo (``OpenMOSS-Team/MOSS-Audio-Tokenizer``)
+# with different commit hashes — so pinning the model ``revision`` makes the
+# codec load fail with a 404 / "Unrecognized model". We therefore load both at
+# HEAD and rely on the transformers>=5.5 baseline (DEC-transformers-5x-baseline)
+# for stability. Pinning would require pre-downloading each repo at its own
+# revision and passing local snapshot paths (not currently warranted).
 _MODEL_REVISION = "c7cd852d87aff71cab5bd2b9b05509cedc0ef1ba"
 
 # Default language used when none is supplied (DEC-default-italian-language).
@@ -133,13 +137,14 @@ class MOSSTTSDAdapter:
         companion audio tokenizer (``codec_path``); the model is loaded with
         ``trust_remote_code=True`` and moved to *device* for GPU inference
         (``CON-gpu-inference``).  FlashAttention 2 is used when available,
-        falling back to the memory-efficient ``sdpa`` implementation. Both
-        ``from_pretrained`` calls pin ``_MODEL_REVISION`` so the remote code is
-        stable, and the transformers 5.x ``PreTrainedConfig`` rename is bridged
-        for the codec via ``_install_transformers_compat`` first.
+        falling back to the memory-efficient ``sdpa`` implementation. Loaded at
+        HEAD (no ``revision`` pin — see ``_MODEL_REVISION``: the processor would
+        forward ``revision`` to the different-repo codec and 404 it), with the
+        transformers 5.x ``PreTrainedConfig`` rename bridged via
+        ``_install_transformers_compat`` first.
         """
         # Bridge the transformers 5.x config-class rename before any remote code
-        # (model or codec) is imported, otherwise the codec import fails on 4.x.
+        # (model or codec) is imported (defensive no-op on the 5.x baseline).
         _install_transformers_compat()
 
         from transformers import AutoModel, AutoProcessor
@@ -152,7 +157,6 @@ class MOSSTTSDAdapter:
 
         processor = AutoProcessor.from_pretrained(
             model_id,
-            revision=_MODEL_REVISION,
             trust_remote_code=True,
             codec_path=_AUDIO_TOKENIZER_ID,
         )
@@ -163,7 +167,6 @@ class MOSSTTSDAdapter:
 
         model = AutoModel.from_pretrained(
             model_id,
-            revision=_MODEL_REVISION,
             trust_remote_code=True,
             attn_implementation=attn_impl,
             torch_dtype=dtype,

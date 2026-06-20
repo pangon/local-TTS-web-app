@@ -27,7 +27,7 @@ The backend baseline is **`transformers>=5.5`** (covers MOSS-TTSD ≥5.0 and Hig
 - The `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` entry stays in `COMPATIBLE_MODELS` (it remains a valid, FOSS catalog model); it simply lists with no available adapter.
 - `transformers` 5.x requires `huggingface-hub` 1.x; the project's `huggingface_hub` usage (`scan_cache_dir`, `snapshot_download`, `model_info`, `HF_HUB_CACHE`) is compatible (verified by the test suite).
 
-Remote-code adapters built on transformers must follow the `trust_remote_code` hardening recorded in the backend component doc: pin the model repo `revision`, and bridge any renamed transformers symbols defensively (e.g. MOSS-TTSD's `_install_transformers_compat`, a no-op on 5.x).
+Remote-code adapters built on transformers must follow the `trust_remote_code` hardening recorded in the backend component doc: prefer pinning the model repo `revision` (except where the loader forwards `revision` into a different-repo sub-component — MOSS-TTSD propagates it to its companion codec, so it loads at HEAD), and bridge any renamed transformers symbols defensively (e.g. MOSS-TTSD's `_install_transformers_compat`, a no-op on 5.x).
 
 ## Enforcement
 

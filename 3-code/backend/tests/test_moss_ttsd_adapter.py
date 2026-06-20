@@ -23,7 +23,6 @@ from local_tts.tts.adapters.moss_ttsd import (
     MOSSTTSDAdapter,
     _AUDIO_TOKENIZER_ID,
     _DEFAULT_LANGUAGE,
-    _MODEL_REVISION,
     _SAMPLE_RATE_DEFAULT,
     _install_transformers_compat,
 )
@@ -126,13 +125,11 @@ class TestMOSSTTSDAdapterLoad:
 
         mock_proc_fp.assert_called_once_with(
             _MODEL_ID,
-            revision=_MODEL_REVISION,
             trust_remote_code=True,
             codec_path=_AUDIO_TOKENIZER_ID,
         )
         model_call = mock_model_fp.call_args
         assert model_call.args[0] == _MODEL_ID
-        assert model_call.kwargs["revision"] == _MODEL_REVISION
         assert model_call.kwargs["trust_remote_code"] is True
         assert model_call.kwargs["torch_dtype"] == torch.bfloat16
         assert model_call.kwargs["attn_implementation"] in ("sdpa", "flash_attention_2")
@@ -145,6 +142,25 @@ class TestMOSSTTSDAdapterLoad:
         assert adapter._model is mock_model_obj
         assert adapter._device == "cuda"
         assert adapter._sample_rate == 24000
+
+    def test_load_does_not_pin_revision(self):
+        """Regression guard: ``revision`` must NOT be passed. The processor
+        forwards extra kwargs into the companion codec's ``AutoModel.from_pretrained``,
+        and the codec is a different repo with different commit hashes — pinning
+        ``revision`` 404s the codec load."""
+        mock_processor = MagicMock()
+        mock_processor.audio_tokenizer = MagicMock()
+        mock_processor.model_config.sampling_rate = 24000
+
+        with patch(
+            "transformers.AutoProcessor.from_pretrained", return_value=mock_processor
+        ) as mock_proc_fp, patch(
+            "transformers.AutoModel.from_pretrained"
+        ) as mock_model_fp:
+            MOSSTTSDAdapter().load(_MODEL_ID, "cuda")
+
+        assert "revision" not in mock_proc_fp.call_args.kwargs
+        assert "revision" not in mock_model_fp.call_args.kwargs
 
     def test_unload_clears_state(self):
         adapter, _, _ = _loaded_adapter()
