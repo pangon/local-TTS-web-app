@@ -63,6 +63,7 @@ class ModelAdapter(Protocol):
 # Maps HuggingFace model ID -> concrete adapter class.
 # Each TASK-loader-* task adds its adapter here upon implementation.
 from local_tts.tts.adapters.kokoro import KokoroAdapter
+from local_tts.tts.adapters.moss_ttsd import MOSSTTSDAdapter
 from local_tts.tts.adapters.qwen3_tts import Qwen3TTSAdapter
 from local_tts.tts.adapters.voxcpm2 import VoxCPM2Adapter
 
@@ -70,6 +71,7 @@ _ADAPTER_REGISTRY: dict[str, type[ModelAdapter]] = {
     "hexgrad/Kokoro-82M": KokoroAdapter,
     "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice": Qwen3TTSAdapter,
     "openbmb/VoxCPM2": VoxCPM2Adapter,
+    "OpenMOSS-Team/MOSS-TTSD-v1.0": MOSSTTSDAdapter,
     # "ResembleAI/chatterbox": ChatterboxAdapter,   # TASK-loader-chatterbox
     # "coqui/XTTS-v2": XTTSv2Adapter,              # TASK-loader-xtts-v2
     # ... (added by adapter implementation tasks)

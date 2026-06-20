@@ -73,6 +73,14 @@ COMPATIBLE_MODELS: dict[str, ModelCatalogEntry] = {
         license="Apache-2.0",
         license_is_foss=True,
     ),
+    "OpenMOSS-Team/MOSS-TTSD-v1.0": ModelCatalogEntry(
+        name=(
+            "MOSS-TTSD v1.0 (Apache 2.0, 20 langs incl. Italian, "
+            "dialogue/multi-speaker, 24 kHz, ~19 GB VRAM)"
+        ),
+        license="Apache-2.0",
+        license_is_foss=True,
+    ),
     "bosonai/higgs-audio-v2-generation-3B-base": ModelCatalogEntry(
         name="Higgs Audio V2 3B (Apache 2.0, Italian partial)",
         license="Apache-2.0",
