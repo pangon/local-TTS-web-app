@@ -17,6 +17,7 @@ import pytest
 from local_tts.preprocessing import profiles as pr
 from local_tts.preprocessing import stages as st
 from local_tts.preprocessing.sentence_segmentation import (
+    PARAM_ISOLATE_QUOTES,
     PARAM_SEGMENT_SENTENCES,
     SentenceSegmentationStage,
 )
@@ -109,6 +110,53 @@ class TestSentenceSplitting:
         assert (
             _run(text, params={PARAM_SEGMENT_SENTENCES: False})
             == "Frase uno. Frase due."
+        )
+
+
+# --------------------------------------------------------------------------
+# Dialogue isolation (« … » guillemets)
+# --------------------------------------------------------------------------
+
+
+class TestDialogueIsolation:
+    def test_trailing_dialogue_tag_becomes_its_own_chunk(self):
+        # A closing quote followed by a dialogue tag: the tag is split off.
+        text = "«Preparatevi all'atterraggio» comunicò."
+        assert _run(text) == '"Preparatevi all\'atterraggio"\ncomunicò.'
+
+    def test_closing_quote_kept_separate_from_following_narration(self):
+        # The newline between a spoken line and the narration that follows it
+        # must be preserved (not glued by reflow upstream).
+        text = "«Vorrei vedere Trantor.» L'ufficiale sorrise."
+        assert _run(text) == '"Vorrei vedere Trantor."\nL\'ufficiale sorrise.'
+
+    def test_opening_quote_starts_a_new_line(self):
+        text = "Arrivò un ufficiale. «La sala è chiusa.»"
+        assert _run(text) == (
+            'Arrivò un ufficiale.\n"La sala è chiusa."'
+        )
+
+    def test_guillemets_flattened_to_straight_quotes(self):
+        assert _run("«ciao»") == '"ciao"'
+
+    def test_guillemets_flattened_even_when_both_switches_off(self):
+        # Flattening is unconditional so the output quote style is stable.
+        text = "narrazione «discorso» fine"
+        assert _run(
+            text,
+            params={
+                PARAM_SEGMENT_SENTENCES: False,
+                PARAM_ISOLATE_QUOTES: False,
+            },
+        ) == 'narrazione "discorso" fine'
+
+    def test_isolation_can_be_disabled_via_param(self):
+        # With isolation off the quote is not split out, but it is still
+        # flattened to straight quotes.
+        text = "«discorso» tag."
+        assert (
+            _run(text, params={PARAM_ISOLATE_QUOTES: False})
+            == '"discorso" tag.'
         )
 
 

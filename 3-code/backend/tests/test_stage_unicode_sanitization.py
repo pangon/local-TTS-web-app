@@ -190,8 +190,16 @@ class TestQuoteNormalization:
     def test_smart_single_quotes_and_apostrophe_normalized(self):
         assert _run("‘ciao’ e l’auto") == "'ciao' e l'auto"
 
-    def test_guillemets_normalized_to_double_quotes(self):
-        assert _run("«citazione»") == '"citazione"'
+    def test_directional_guillemets_left_intact(self):
+        # The double-angle guillemets carry open/close direction used by the
+        # sentence-segmentation stage to isolate dialogue; the Unicode stage
+        # leaves them intact and that later stage flattens them to '"'.
+        assert _run("«citazione»") == "«citazione»"
+
+    def test_single_angle_quotes_still_normalized(self):
+        # Single-angle quotes are not dialogue delimiters here, so they are
+        # still normalized to straight apostrophes by the Unicode stage.
+        assert _run("‹ciao›") == "'ciao'"
 
     def test_primes_normalized(self):
         assert _run("5′ 6″") == "5' 6\""

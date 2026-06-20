@@ -522,9 +522,15 @@ Two stages cooperate on line structure: **layout repair** (stage 2) reflows soft
    HARI SELDON nato nell'anno 11.988, morto nel 12.069. Nel calendario in uso.
    ```
    Verify the title `Gli psicostorici` and the bare chapter number (`1`→`uno`) each stay on their **own** line (a bare-number line is structural and must not be glued onto the surrounding text), and that the body is split **one sentence per line** (`…morto nel dodicimila…nove.` and `Nel calendario in uso.` on separate lines) with `11.988`/`12.069` verbalized, not mis-split on their internal dots.
-5. **Chapter boundaries survive:** run the normalized text through synthesis (5.1.10) and confirm the resulting audiobook still splits into the expected chapters (layout repair runs before chapter detection and must not defeat it).
+5. **Dialogue isolation:** preprocess an Italian dialogue line, e.g.
+   ```
+   Arrivò un ufficiale. «La sala rimarrà chiusa. Preparatevi all'atterraggio» comunicò.
+   «Posso restare? Vorrei vedere Trantor.» L'ufficiale sorrise.
+   ```
+   Verify the spoken span (delimited by `«…»`) is isolated onto its own line(s): the narration before the quote, the quote, and the trailing dialogue tag (`comunicò.`) are **separate** lines/chunks, and the following narration (`L'ufficiale sorrise.`) is **not** glued onto the closing quote. The guillemets are flattened to straight `"` in the output (the Unicode stage leaves `«`/`»` intact so segmentation can use their direction first).
+6. **Chapter boundaries survive:** run the normalized text through synthesis (5.1.10) and confirm the resulting audiobook still splits into the expected chapters (layout repair runs before chapter detection and must not defeat it).
 
-Expected outcome: end-of-line hyphenation is resolved, spurious wraps are reflowed, isolated page numbers are stripped, structural lines (titles, bare chapter numbers, headings) are kept standalone, the body is segmented one sentence per line, and paragraph/chapter boundaries are preserved so chapter detection still functions.
+Expected outcome: end-of-line hyphenation is resolved, spurious wraps are reflowed, isolated page numbers are stripped, structural lines (titles, bare chapter numbers, headings) are kept standalone, spoken dialogue (`«…»`) is isolated onto its own chunk(s), the body is segmented one sentence per line, and paragraph/chapter boundaries are preserved so chapter detection still functions.
 
 #### 5.1.6 Numeric & symbolic verbalization stage (Italian) (REQ-F-text-numeric-symbolic-verbalization)
 

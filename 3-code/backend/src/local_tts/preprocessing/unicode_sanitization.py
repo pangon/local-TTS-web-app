@@ -12,8 +12,11 @@ default pipeline (``DEC-text-preprocessing-pipeline``).  In order, the stage:
 3. Removes or verbalizes emoji, per configuration.
 4. Normalizes dash variants (em/en/figure dash, horizontal bar, minus sign, …)
    to a single configurable form (hyphen-minus by default).
-5. Normalizes smart/typographic quotes, guillemets, and primes to straight
-   ASCII quotes.
+5. Normalizes smart/typographic quotes and primes to straight ASCII quotes.
+   The directional double-angle guillemets (``«`` / ``»``) are left intact here
+   so the sentence-segmentation stage can use their open/close direction to
+   isolate spoken dialogue onto its own line(s); that stage flattens them to
+   ``"`` afterwards.
 6. Removes invisible / disallowed code points — control (``Cc``, except the
    structural tab and newline), format (``Cf`` — covers zero-width spaces, the
    soft hyphen, the BOM, and bidi marks), surrogate (``Cs``), and private-use
@@ -99,8 +102,11 @@ _QUOTE_TABLE: dict[int, str] = {
     0x201D: '"',  # right double quotation mark
     0x201E: '"',  # double low-9 quotation mark
     0x201F: '"',  # double high-reversed-9 quotation mark
-    0x00AB: '"',  # left-pointing double angle quotation mark (guillemet)
-    0x00BB: '"',  # right-pointing double angle quotation mark (guillemet)
+    # NB: the directional double-angle guillemets (« U+00AB / » U+00BB) are
+    # deliberately NOT flattened here. They delimit spoken dialogue, and the
+    # sentence-segmentation stage uses their open/close direction to isolate
+    # each quoted span onto its own line before flattening them to '"'. Doing
+    # it here would discard that direction (DEC-text-preprocessing-pipeline).
     0x2033: '"',  # double prime
     0x2036: '"',  # reversed double prime
     0x301D: '"',  # reversed double prime quotation mark

@@ -202,7 +202,7 @@ The Preprocessing Service runs a modular pipeline of discrete, independently uni
 | 2 | Layout Repair | Resolve end-of-line hyphenation; reflow sentences split across hard line breaks; strip isolated page numbers/layout fragments; normalize irregular whitespace; preserve paragraph and chapter boundaries | `REQ-F-text-layout-repair` |
 | 3 | Numeric & Symbolic Verbalization | Spell out cardinals/ordinals, dates, percentages, currency, and common symbols, language-aware | `REQ-F-text-numeric-symbolic-verbalization` |
 | 4 | Abbreviation Expansion | Verbalize common abbreviations/acronyms from a language-specific built-in set; apply an optional domain dictionary when supplied | `REQ-F-abbreviation-expansion` |
-| 5 | Sentence Segmentation | Put each sentence on its own line so the reviewed text mirrors the synthesizer's sentence chunking. Runs **last**, after numbers and abbreviations are expanded, so a sentence-ending period is not confused with a thousands separator (`11.988`) or an abbreviation dot (`E.F.`) | `REQ-F-text-layout-repair` |
+| 5 | Sentence Segmentation | Put each sentence on its own line so the reviewed text mirrors the synthesizer's sentence chunking. Runs **last**, after numbers and abbreviations are expanded, so a sentence-ending period is not confused with a thousands separator (`11.988`) or an abbreviation dot (`E.F.`). Also isolates spoken dialogue: breaks before `«` and after `»` so the quote and any dialogue tag are distinct chunks, then flattens the guillemets to `"` (the Unicode stage leaves `«`/`»` intact for this) | `REQ-F-text-layout-repair` |
 
 ```mermaid
 graph LR
