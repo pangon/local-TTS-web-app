@@ -20,6 +20,7 @@ dependencies = [
     "num2words>=0.5.10",  # language-aware number/ordinal/year spelling for the preprocessing pipeline (LGPL, FOSS)
     "kokoro>=0.9.2",
     "qwen-tts>=0.1.1",
+    "voxcpm>=0.1.0",  # VoxCPM2 adapter (openbmb/VoxCPM2), Apache-2.0/FOSS
 ]
 
 [project.optional-dependencies]

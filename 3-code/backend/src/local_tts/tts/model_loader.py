@@ -68,6 +68,11 @@ COMPATIBLE_MODELS: dict[str, ModelCatalogEntry] = {
         license="Apache-2.0",
         license_is_foss=True,
     ),
+    "openbmb/VoxCPM2": ModelCatalogEntry(
+        name="VoxCPM2 (Apache 2.0, 30 langs incl. Italian, 48 kHz, ~8 GB VRAM)",
+        license="Apache-2.0",
+        license_is_foss=True,
+    ),
     "bosonai/higgs-audio-v2-generation-3B-base": ModelCatalogEntry(
         name="Higgs Audio V2 3B (Apache 2.0, Italian partial)",
         license="Apache-2.0",
