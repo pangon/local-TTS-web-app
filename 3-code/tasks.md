@@ -103,6 +103,7 @@
 | TASK-library-view | Implement library view: browse audiobooks, delete with confirmation | P1 | Done | [REQ-F-library-listing](../1-objectives/requirements/REQ-F-library-listing.md), [REQ-F-delete-audiobook](../1-objectives/requirements/REQ-F-delete-audiobook.md) | TASK-library-api | 2026-06-15 | Inline (in-row) delete confirmation; rows link to /playback/:id |
 | TASK-playback-view | Implement playback view: audio player, chapter navigation, playback resume | P1 | Done | [REQ-F-audiobook-playback](../1-objectives/requirements/REQ-F-audiobook-playback.md), [REQ-F-playback-resume](../1-objectives/requirements/REQ-F-playback-resume.md) | TASK-chapter-audio-streaming, TASK-playback-position-api | 2026-06-15 | Native &lt;audio&gt; player; resume seeks on loadedmetadata; bookmark saved on pause/end/chapter-change/unmount (best-effort) |
 | TASK-creation-view-review-step | Rework audiobook-creation view: upload → call /preprocess → review/confirm normalized text → synthesize confirmed text | P1 | Done | [REQ-USA-normalized-text-review](../1-objectives/requirements/REQ-USA-normalized-text-review.md) | TASK-audiobook-creation-view, TASK-preprocess-api, TASK-synthesis-api-text-input | 2026-06-16 | Phase 5.1. Two-step flow: new `api/preprocess.ts` (`preprocessFile`) + `api/jobs.ts` switched to JSON `{text, source_filename, voice?, language?}`. `CreateView.vue` reworked: select .txt → "Preprocess & Review" (busy state) → editable normalized-text textarea with before/after char counts → "Confirm & Start Synthesis" (no auto-start). Resolved `language` from /preprocess is forwarded verbatim to /jobs/synthesis so both agree. Tests: rewrote `CreateView.spec.ts` + `api-jobs.spec.ts`, added `api-preprocess.spec.ts` (123 frontend tests passing, type-check clean) |
+| TASK-model-list-adapter-grouping | Split the model-listing view into two lists: adapter-available and adapter-not-yet-available | P2 | Todo | [REQ-F-model-listing](../1-objectives/requirements/REQ-F-model-listing.md) | TASK-model-management-view | 2026-06-20 | Phase 5.2 (first task). Frontend-only; uses the existing `loader_available` flag from `GET /models`. First list = `loader_available=true` (downloadable/loadable); second list = `loader_available=false` (shown for visibility, download/load unavailable). See architecture § Adapter Pattern |
 | TASK-model-license-notice-ui | Display a license notice in the model-listing view for models with license_is_foss=false | P2 | Todo | [REQ-F-model-listing](../1-objectives/requirements/REQ-F-model-listing.md) | TASK-model-license-metadata, TASK-model-management-view | 2026-06-20 | Phase 5.2. Per DEC-model-license-disclosure. Render a clearly visible license_notice in the model-management view for any non-FOSS model (e.g. fishaudio/s2-pro, bosonai/higgs-audio-v3-tts-4b) so usage terms are seen before download/use |
 | TASK-voice-language-selection-ui | Add voice and language selection to audiobook creation form | P2 | Todo | [REQ-F-voice-language-selection](../1-objectives/requirements/REQ-F-voice-language-selection.md) | TASK-model-voices-api, TASK-audiobook-creation-view | 2026-03-12 | |
 | TASK-text-preview-view | Implement text preview view: text input, synthesize, play ephemeral audio | P2 | Todo | [REQ-F-text-preview](../1-objectives/requirements/REQ-F-text-preview.md), [REQ-USA-normalized-text-review](../1-objectives/requirements/REQ-USA-normalized-text-review.md) | TASK-preview-job-service, TASK-frontend-sse-client | 2026-06-16 | Run input through /preprocess; review satisfied inline (no separate confirmation screen) per DEC-preprocess-review-flow |
@@ -252,6 +253,7 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 ### Phase 5.2: Priority Additional TTS Model Adapters
 
 **Capabilities delivered:**
+- Model-listing view split into two lists — models with an available adapter, then models whose adapter is not yet available — by the `loader_available` flag (`REQ-F-model-listing`)
 - Model license disclosure: each model carries license metadata in `COMPATIBLE_MODELS` / `GET /models`, and the model-listing view shows a visible license notice for non-FOSS models (`REQ-F-model-listing`, `DEC-model-license-disclosure`)
 - Four additional TTS models enabled through the existing `ModelAdapter` abstraction (`REQ-F-synthesize-audiobook`), each registered in `COMPATIBLE_MODELS` and translating the app-layer ISO 639-1 code to its model-specific identifier (architecture § Model-Specific Loading Requirements):
   - `openbmb/VoxCPM2` — Apache-2.0 (FOSS); `voxcpm` package; Italian; 48 kHz
@@ -264,12 +266,13 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 > **Note:** The two non-FOSS models are open-weight and free for personal/local use but carry research/non-commercial licenses (commercial use is paid). They are permitted under the personal-use reading of `REQ-COMP-foss-only` AC2 and surfaced with a license notice per `DEC-model-license-disclosure`; the objectives artifacts were left unchanged (user choice, 2026-06-20). The license-disclosure tasks are sequenced first so the notice is live before the non-FOSS adapters land.
 
 **Tasks:**
-1. TASK-model-license-metadata
-2. TASK-model-license-notice-ui
-3. TASK-loader-voxcpm2
-4. TASK-loader-moss-tts
-5. TASK-loader-fish-s2-pro
-6. TASK-loader-higgs-audio-v3
+1. TASK-model-list-adapter-grouping
+2. TASK-model-license-metadata
+3. TASK-model-license-notice-ui
+4. TASK-loader-voxcpm2
+5. TASK-loader-moss-tts
+6. TASK-loader-fish-s2-pro
+7. TASK-loader-higgs-audio-v3
 
 ### Phase 6: Voice Selection & Text Preview
 

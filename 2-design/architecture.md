@@ -339,7 +339,7 @@ TTS models on HuggingFace Hub do **not** share a common loading or inference int
 
 ### Adapter Pattern
 
-Each compatible model is annotated with a `loader_available` flag. Models without an implemented adapter are disabled in the frontend (both download and load are unavailable). As adapters are implemented, models become available. The `ModelAdapter` protocol defines:
+Each compatible model is annotated with a `loader_available` flag. The frontend model-listing view groups models into **two separate lists** by this flag: a first list of models **with an available adapter** (`loader_available = true`, downloadable and loadable) and a second list of models **whose adapter is not yet available** (`loader_available = false`, shown for visibility but with download and load unavailable). As adapters are implemented, models move from the second list to the first. The `ModelAdapter` protocol defines:
 
 - `load(model_id, device) -> None` — load model and tokenizer/processor onto the specified device
 - `synthesize(text, **kwargs) -> numpy.ndarray` — run inference and return raw audio samples
