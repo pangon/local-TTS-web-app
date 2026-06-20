@@ -80,15 +80,22 @@ class _FailingAdapter:
 
 
 class TestSplitIntoSentences:
-    def test_simple_sentences(self):
-        text = "Hello world. How are you? I am fine!"
-        result = split_into_sentences(text)
-        assert result == ["Hello world.", "How are you?", "I am fine!"]
+    """Chunking is one chunk per line — splitting on newlines only, following
+    the preprocessing pipeline's segmentation (no punctuation logic)."""
 
-    def test_single_sentence_no_punctuation(self):
-        text = "Hello world"
+    def test_splits_on_newlines(self):
+        text = "Prima frase.\nSeconda frase.\nTerza frase."
         result = split_into_sentences(text)
-        assert result == ["Hello world"]
+        assert result == ["Prima frase.", "Seconda frase.", "Terza frase."]
+
+    def test_single_line_with_multiple_sentences_is_one_chunk(self):
+        # Punctuation is deliberately NOT a split point: a line stays whole.
+        text = "Prima frase. Seconda frase. Terza frase."
+        result = split_into_sentences(text)
+        assert result == ["Prima frase. Seconda frase. Terza frase."]
+
+    def test_single_line_no_punctuation(self):
+        assert split_into_sentences("Solo un titolo") == ["Solo un titolo"]
 
     def test_empty_text(self):
         assert split_into_sentences("") == []
@@ -96,21 +103,22 @@ class TestSplitIntoSentences:
     def test_whitespace_only(self):
         assert split_into_sentences("   ") == []
 
-    def test_multiple_spaces_between_sentences(self):
-        text = "First sentence.   Second sentence."
-        result = split_into_sentences(text)
-        assert result == ["First sentence.", "Second sentence."]
+    def test_blank_lines_are_dropped(self):
+        text = "Uno.\n\n\nDue."
+        assert split_into_sentences(text) == ["Uno.", "Due."]
 
-    def test_preserves_abbreviations_without_space(self):
-        # "Dr.Jones" should not be split since there's no space after the period
-        text = "Dr.Jones said hello. Then left."
-        result = split_into_sentences(text)
-        assert result == ["Dr.Jones said hello.", "Then left."]
+    def test_each_line_is_stripped(self):
+        text = "  Uno.  \n\t Due. \n"
+        assert split_into_sentences(text) == ["Uno.", "Due."]
 
-    def test_newlines_within_sentence(self):
-        text = "First sentence.\nSecond sentence."
-        result = split_into_sentences(text)
-        assert result == ["First sentence.", "Second sentence."]
+    def test_dialogue_tag_is_its_own_chunk(self):
+        # The whole point of the change: a dialogue tag isolated onto its own
+        # line by preprocessing becomes a distinct synthesis chunk.
+        text = 'Preparatevi all\'atterraggio"\ncomunicò.'
+        assert split_into_sentences(text) == [
+            'Preparatevi all\'atterraggio"',
+            "comunicò.",
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -213,12 +221,12 @@ class TestSynthesizeChapter:
         adapter = _FakeAdapter()
         output = tmp_path / "multi.mp3"
         duration = synthesize_chapter(
-            "First sentence. Second sentence. Third sentence.",
+            "First sentence.\nSecond sentence.\nThird sentence.",
             adapter,
             output,
         )
         assert output.exists()
-        # Adapter should be called 3 times (once per sentence)
+        # Adapter should be called 3 times (once per line/chunk)
         assert adapter.call_count == 3
         assert duration > 0
 
@@ -227,7 +235,7 @@ class TestSynthesizeChapter:
         output = tmp_path / "cb.mp3"
         calls: list[tuple[int, int]] = []
         synthesize_chapter(
-            "First. Second. Third.",
+            "First.\nSecond.\nThird.",
             adapter,
             output,
             on_sentence_done=lambda done, total: calls.append((done, total)),
@@ -308,8 +316,8 @@ class TestSynthesizeChapters:
     def test_progress_character_based_multi_sentence(self, tmp_path: Path):
         """Progress updates per sentence within a single chapter."""
         adapter = _FakeAdapter()
-        # 3 sentences of roughly equal length → ~33%, ~66%, 100%
-        chapters = [Chapter(number=1, title="Ch1", text="AAAA. BBBB. CCCC.")]
+        # 3 lines of roughly equal length → ~33%, ~66%, 100%
+        chapters = [Chapter(number=1, title="Ch1", text="AAAA.\nBBBB.\nCCCC.")]
         progress_values: list[int] = []
         synthesize_chapters(
             chapters, adapter, tmp_path,
@@ -340,8 +348,8 @@ class TestSynthesizeChapters:
     def test_progress_deduplicates_same_percentage(self, tmp_path: Path):
         """Duplicate percentage values are not reported twice."""
         adapter = _FakeAdapter()
-        # 200 single-char sentences → many will map to the same percentage
-        text = ". ".join("X" for _ in range(200)) + "."
+        # 200 single-char lines → many will map to the same percentage
+        text = "\n".join("X." for _ in range(200))
         chapters = [Chapter(number=1, title="Ch1", text=text)]
         progress_values: list[int] = []
         synthesize_chapters(

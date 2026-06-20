@@ -1,15 +1,15 @@
 """Text-to-MP3 synthesis with progress callbacks.
 
 Converts text chapters to MP3 audio files using a model adapter on GPU.
-Text is split into sentences for optimal synthesis quality, and sentences
-are synthesized individually then concatenated. Requires ffmpeg installed
-on the system for MP3 encoding via pydub.
+Text is split into chunks — one per line, following the text-preprocessing
+pipeline's segmentation — and each chunk is synthesized individually then
+concatenated. Requires ffmpeg installed on the system for MP3 encoding via
+pydub.
 """
 
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
@@ -43,16 +43,21 @@ class SynthesisResult:
 
 
 def split_into_sentences(text: str) -> list[str]:
-    """Split text into sentences suitable for individual synthesis.
+    """Split text into chunks for individual synthesis — one chunk per line.
 
-    Splits on sentence-ending punctuation (.!?) followed by whitespace.
-    Preserves sentences that contain no such punctuation as a single chunk.
+    Chunking follows the line division produced by the text-preprocessing
+    pipeline, whose final stage already segments the text into one sentence
+    per line and isolates spoken dialogue
+    (``DEC-text-preprocessing-pipeline``). Splitting is on **newlines only** —
+    punctuation is deliberately not considered — so the synthesized chunks
+    match the reviewed/normalized text exactly. Blank lines (paragraph
+    boundaries) and surrounding whitespace are dropped.
+
+    A line that still holds several sentences (e.g. if segmentation was
+    disabled, or an abbreviation blocked a split upstream) is synthesized as a
+    single chunk.
     """
-    text = text.strip()
-    if not text:
-        return []
-    sentences = re.split(r"(?<=[.!?])\s+", text)
-    return [s.strip() for s in sentences if s.strip()]
+    return [line.strip() for line in text.split("\n") if line.strip()]
 
 
 def synthesize_segment(

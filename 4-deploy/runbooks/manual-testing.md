@@ -499,7 +499,7 @@ Expected outcome: invisible/control characters, NBSP/whitespace variants, dash/q
 
 #### 5.1.5 Layout repair & sentence segmentation stages (REQ-F-text-layout-repair)
 
-Two stages cooperate on line structure: **layout repair** (stage 2) reflows soft-wrapped sentence fragments back together, and **sentence segmentation** (stage 5, the last) then puts each sentence on its own line. Sentence segmentation runs after numbers/abbreviations are expanded so a sentence-ending period is not confused with a thousands separator (`11.988`) or an abbreviation dot.
+Two stages cooperate on line structure: **layout repair** (stage 2) reflows soft-wrapped sentence fragments back together, and **sentence segmentation** (stage 5, the last) then puts each sentence on its own line. Sentence segmentation runs after numbers/abbreviations are expanded so a sentence-ending period is not confused with a thousands separator (`11.988`) or an abbreviation dot. The TTS synthesizer then chunks the confirmed text **one line per segment** (splitting on newlines only, not punctuation), so the lines produced here are exactly the spoken chunks — each line becomes a distinct TTS chunk with a short silence between them.
 
 1. Build an input that mimics PDF-to-text breakage:
    ```

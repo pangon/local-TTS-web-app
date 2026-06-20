@@ -13,12 +13,14 @@ abbreviation expansion — so a sentence-ending period is no longer ambiguous wi
 a thousands separator (``11.988``) or an abbreviation dot (``E.F.``, ``sig.``):
 those have already been expanded away by the time this stage runs.
 
-The split mirrors the synthesizer's own sentence chunking (split on
-``.``/``!``/``?`` followed by whitespace), so the one-line-per-sentence preview
-matches the TTS segmentation.  Existing newlines are preserved: blank lines keep
-paragraph boundaries, and standalone structural lines (headings, list items,
-bare numbers) — already on their own physical line from layout repair — are left
-untouched because they contain no intra-line sentence break.
+The split is on ``.``/``!``/``?`` followed by whitespace.  The synthesizer
+chunks the confirmed text **one line per chunk** (it splits on newlines, not
+punctuation), so this stage's one-sentence-per-line output *defines* the TTS
+segmentation and the reviewed text matches the spoken chunks exactly.  Existing
+newlines are preserved: blank lines keep paragraph boundaries, and standalone
+structural lines (headings, list items, bare numbers) — already on their own
+physical line from layout repair — are left untouched because they contain no
+intra-line sentence break.
 
 The stage also performs **dialogue isolation**: a spoken span delimited by the
 directional double-angle guillemets (``«`` … ``»``, left intact by the Unicode
@@ -53,12 +55,12 @@ DEFAULT_SEGMENT_SENTENCES = True
 PARAM_ISOLATE_QUOTES = "isolate_quotes"
 DEFAULT_ISOLATE_QUOTES = True
 
-# Split on sentence-ending punctuation (. ! ?) followed by whitespace. This
-# mirrors the synthesizer's `split_into_sentences` so the reviewed text is
-# segmented exactly like the TTS chunks. A lookbehind keeps the terminator on
-# the preceding sentence; only intra-line whitespace runs (typically a single
-# space) become line breaks here, because the stage processes one physical
-# line at a time.
+# Split on sentence-ending punctuation (. ! ?) followed by whitespace. The
+# resulting one-sentence-per-line layout becomes the TTS chunking: the
+# synthesizer splits the confirmed text on newlines. A lookbehind keeps the
+# terminator on the preceding sentence; only intra-line whitespace runs
+# (typically a single space) become line breaks here, because the stage
+# processes one physical line at a time.
 _SENTENCE_BREAK_RE = re.compile(r"(?<=[.!?])\s+")
 
 # Directional double-angle guillemets that delimit a spoken span.
