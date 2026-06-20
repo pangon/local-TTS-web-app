@@ -374,12 +374,17 @@ Returns compatible HuggingFace TTS models with cache and load status (`REQ-F-mod
     "name": "MMS TTS English",
     "is_cached": true,
     "is_loaded": false,
-    "loader_available": true
+    "loader_available": true,
+    "license": "Apache-2.0",
+    "license_is_foss": true,
+    "license_notice": null
   }
 ]
 ```
 
 `loader_available` indicates whether a model-specific adapter is implemented. Models without an adapter cannot be downloaded or loaded — the frontend hides these actions (see architecture § Adapter Pattern).
+
+`license`, `license_is_foss`, and `license_notice` surface each model's usage terms. When `license_is_foss` is `false` (open-weight but research / non-commercial — e.g. `fishaudio/s2-pro`, `bosonai/higgs-audio-v3-tts-4b`), `license_notice` carries a short description of the terms and the frontend model-listing view displays it (`REQ-F-model-listing`; see architecture § Model Licensing & Frontend Disclosure and `DEC-model-license-disclosure`).
 
 ### Download Model
 

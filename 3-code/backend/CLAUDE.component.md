@@ -58,3 +58,4 @@
 | [DEC-default-italian-language](../../2-design/decisions/DEC-default-italian-language.md) | Italian as Default Language for All Adapters | When implementing a new model adapter or modifying adapter default configuration |
 | [DEC-text-preprocessing-pipeline](../../2-design/decisions/DEC-text-preprocessing-pipeline.md) | Modular Backend Text-Preprocessing Pipeline | When implementing or modifying the Preprocessing Service, any pipeline stage, or stage configuration |
 | [DEC-preprocess-review-flow](../../2-design/decisions/DEC-preprocess-review-flow.md) | Synchronous Preprocess-then-Confirm Synthesis Flow | When implementing the `/preprocess` endpoint or the `/jobs/synthesis` and `/jobs/preview` request handling |
+| [DEC-model-license-disclosure](../../2-design/decisions/DEC-model-license-disclosure.md) | Permit Open-Weight Non-FOSS Models with Frontend License Disclosure | When adding or editing a `COMPATIBLE_MODELS` entry or the `GET /models` response |

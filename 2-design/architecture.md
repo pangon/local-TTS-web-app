@@ -332,6 +332,10 @@ TTS models on HuggingFace Hub do **not** share a common loading or inference int
 | `parler-tts/parler-tts-mini-multilingual-v1.1` | No (without extra pkg) | `parler-tts` GitHub package, `ParlerTTSForConditionalGeneration` | `model_type: parler_tts` not in standard transformers |
 | `Zyphra/Zonos-v0.1-transformer` | No | `zonos` pip package, `Zonos.from_pretrained()` | Mamba/transformer backbone, custom config |
 | `nari-labs/Dia-1.6B-0626` | Yes (transformers>=5.x) | `DiaForConditionalGeneration` or `dia` pip package | Merged into transformers 5.x+; also has standalone `dia` library |
+| `openbmb/VoxCPM2` | No | `voxcpm` pip package, `VoxCPM.from_pretrained()` | **Apache-2.0 (FOSS).** 30 languages incl. Italian (auto-detected, no language tag needed); 48 kHz output; ~2B params, ~8 GB VRAM |
+| `OpenMOSS-Team/MOSS-TTSD-v1.0` | Via `trust_remote_code` | `AutoModel` / `AutoProcessor` with `trust_remote_code=True` + companion audio tokenizer (`OpenMOSS-Team/MOSS-Audio-Tokenizer`) | **Apache-2.0 (FOSS).** 20 languages incl. Italian (the older `fnlp/MOSS-TTSD-v0.5` is CN/EN only — use v1.0 for Italian); dialogue / multi-speaker–oriented (architectural mismatch for single-voice narration); 24 kHz; ~8B params, ~19 GB VRAM (exceeds the min-spec 4 GB GPU) |
+| `fishaudio/s2-pro` | No | Fish Speech GitHub repo / `fish-speech` package (same family as `fishaudio/fish-speech-1.5`); gated HF download | ⚠️ **Fish Audio Research License — non-commercial, not OSI/FOSS** (free for personal use; commercial use is paid). License notice required in the UI per `DEC-model-license-disclosure`. 80+ languages incl. Italian; ~5B params, 12–24 GB VRAM |
+| `bosonai/higgs-audio-v3-tts-4b` | Yes (transformers>=5.5) | Custom arch `HiggsMultimodalQwen3ForConditionalGeneration` (`model_type: higgs_multimodal_qwen3`, native in transformers>=5.5, no remote-code fallback); recommended serving via SGLang-Omni / vLLM-Omni | ⚠️ **Boson Research & Non-Commercial License — not OSI/FOSS** (free for personal use; commercial use is paid). License notice required in the UI per `DEC-model-license-disclosure`. 102 languages incl. Italian; 24 kHz; ~4B params, ~9.3 GB weights |
 
 ### Adapter Pattern
 
@@ -343,6 +347,15 @@ Each compatible model is annotated with a `loader_available` flag. Models withou
 - `unload() -> None` — release GPU memory
 
 The application layer speaks **ISO 639-1 language codes** (`it`, `en`, …) — the same codes used by the preprocessing pipeline and `DEC-default-italian-language`, forwarded through the synthesis request to `synthesize(language=…)`. TTS models, however, use their own language identifiers (Kokoro: single-char codes like `i`; Qwen3: full names like `Italian`). Each adapter is therefore responsible for **translating the incoming ISO 639-1 code to its model-specific identifier** (and should accept its native identifiers too, plus raise a clear error for an unrecognized language). This keeps the application layer model-agnostic and localizes language naming in the adapters.
+
+### Model Licensing & Frontend Disclosure
+
+Per `REQ-COMP-foss-only` (AC2) and `CON-zero-budget`, every supported model must be open-weight and freely licensed for personal use. Models fall into two license classes:
+
+- **OSI open-source** (Apache-2.0 / MIT) — e.g. Kokoro, Qwen3-TTS, VoxCPM2, MOSS-TTSD. No usage caveat.
+- **Open-weight but research / non-commercial** — currently Fish Audio S2-Pro (`fishaudio/s2-pro`) and Higgs Audio v3 (`bosonai/higgs-audio-v3-tts-4b`). They run fully locally and are free for this personal, single-user deployment, but are **not** OSI open-source and require a separate paid license for commercial use.
+
+Per `DEC-model-license-disclosure`, non-OSI models are permitted under the personal-use reading of `REQ-COMP-foss-only` AC2, but their differing terms must be disclosed: each `COMPATIBLE_MODELS` entry carries license metadata (`license`, `license_is_foss`, and a `license_notice` when not FOSS), the `GET /models` response exposes it, and the **frontend model-listing view displays a visible license notice for any model whose license is not FOSS** (`REQ-F-model-listing`) so the user sees the usage terms before downloading or using it.
 
 ## Design Risks
 

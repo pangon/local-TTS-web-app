@@ -38,3 +38,4 @@
 | [DEC-sse-progress](../../2-design/decisions/DEC-sse-progress.md) | Server-Sent Events for Real-Time Updates | When implementing progress reporting or live status updates |
 | [DEC-frontend-dev-env](../../2-design/decisions/DEC-frontend-dev-env.md) | Frontend Development Environment Conventions | When installing dependencies, running tests, building, or adding new frontend modules |
 | [DEC-preprocess-review-flow](../../2-design/decisions/DEC-preprocess-review-flow.md) | Synchronous Preprocess-then-Confirm Synthesis Flow | When implementing the audiobook-creation review step or the text-preview inline review |
+| [DEC-model-license-disclosure](../../2-design/decisions/DEC-model-license-disclosure.md) | Permit Open-Weight Non-FOSS Models with Frontend License Disclosure | When implementing or modifying the model-listing view (license notice for non-FOSS models) |
