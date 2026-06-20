@@ -249,25 +249,35 @@ class TestMOSSTTSDAdapterSynthesize:
         kwargs = processor.build_user_message.call_args.kwargs
         assert kwargs["text"] == "[S1] Già marcato"
 
-    def test_no_reference_skips_voice_cloning(self):
+    def test_uses_generation_mode_single_user_message(self):
+        """Single-voice narration must use generation mode (a lone user
+        message). continuation mode requires a trailing assistant turn and would
+        raise an (empty) ValueError in the processor."""
         adapter, processor, _ = _loaded_adapter()
         adapter.synthesize("Ciao mondo")
-        processor.encode_audios_from_wav.assert_not_called()
+        # The processor was called as processor([conversation], mode="generation").
+        assert processor.call_args.kwargs.get("mode") == "generation"
+        conversation = processor.call_args.args[0][0]
+        assert len(conversation) == 1  # a single (user) message
+        # No assistant message is built (that is continuation-mode only).
         processor.build_assistant_message.assert_not_called()
 
-    def test_reference_audio_triggers_voice_cloning(self):
+    def test_no_reference_passes_none_reference(self):
         adapter, processor, _ = _loaded_adapter()
-        adapter.synthesize("Ciao", voice="/path/to/ref.wav", prompt_text="Riferimento")
+        adapter.synthesize("Ciao mondo")
+        assert processor.build_user_message.call_args.kwargs["reference"] is None
 
-        processor.encode_audios_from_wav.assert_called_once_with(
-            ["/path/to/ref.wav"], sampling_rate=24000
-        )
-        processor.build_assistant_message.assert_called_once()
+    def test_reference_audio_attached_to_user_message(self):
+        """An optional reference clip path is attached to the user message's
+        ``reference``; the processor encodes it itself (no encode_audios_from_wav
+        call from the adapter)."""
+        adapter, processor, _ = _loaded_adapter()
+        adapter.synthesize("Ciao", voice="/path/to/ref.wav")
+
         user_kwargs = processor.build_user_message.call_args.kwargs
-        assert user_kwargs["reference"] == ["ref_codes"]
-        # The reference transcript is prepended (as its own [S1] turn).
-        assert "[S1] Riferimento" in user_kwargs["text"]
-        assert "Ciao" in user_kwargs["text"]
+        assert user_kwargs["reference"] == ["/path/to/ref.wav"]
+        assert user_kwargs["text"] == "[S1] Ciao"
+        processor.build_assistant_message.assert_not_called()
 
     def test_generate_called_with_default_max_new_tokens(self):
         adapter, _, model = _loaded_adapter()

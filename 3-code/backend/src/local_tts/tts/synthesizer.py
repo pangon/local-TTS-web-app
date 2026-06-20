@@ -81,7 +81,11 @@ def synthesize_segment(
     try:
         return adapter.synthesize(text, **kwargs)
     except Exception as exc:
-        raise SynthesisError(f"Failed to synthesize text segment: {exc}") from exc
+        # Include the exception type so bare exceptions (e.g. a `raise ValueError`
+        # with no message, as some model remote code does) are still diagnosable.
+        raise SynthesisError(
+            f"Failed to synthesize text segment: {type(exc).__name__}: {exc}"
+        ) from exc
 
 
 def encode_to_mp3(

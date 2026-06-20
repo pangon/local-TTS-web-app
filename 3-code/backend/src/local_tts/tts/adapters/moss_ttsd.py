@@ -12,7 +12,9 @@ single-voice audiobook narration is a recognised architectural mismatch
 (architecture § Model-Specific Loading Requirements): this adapter wraps the
 input in a single ``[S1]`` speaker turn and, by default, generates without a
 reference clip (the model picks its own voice).  An optional reference clip
-(``voice``) plus its transcript (``prompt_text``) enables zero-shot cloning.
+(``voice``) enables zero-shot cloning.  Synthesis uses the processor's
+**generation** mode (a lone ``user`` message; the model produces the audio
+turn) — not ``continuation`` mode, which requires a paired ``assistant`` turn.
 
 Language: MOSS-TTSD **auto-detects** the spoken language from the input text —
 the inference API takes no language tag (20 languages incl. Italian).  Like
@@ -29,8 +31,8 @@ toggle to disable).
 
 .. note::
    The inference call sequence mirrors the model's published
-   ``AutoModel``/``AutoProcessor`` continuation workflow.  The package is not
-   installed in this environment (the ~8B model is ~19 GB and exceeds the
+   ``AutoModel``/``AutoProcessor`` workflow (generation mode).  The package is
+   not installed in this environment (the ~8B model is ~19 GB and exceeds the
    min-spec 4 GB GPU), so unit tests mock it; runtime validation against the
    real weights is performed on a GPU host.
 """
@@ -119,9 +121,10 @@ class MOSSTTSDAdapter:
     """Model adapter for ``OpenMOSS-Team/MOSS-TTSD-v1.0``.
 
     Loads the model and its processor via transformers ``trust_remote_code``
-    and runs the published continuation-style generation workflow.  The input
-    text is wrapped as a single ``[S1]`` speaker turn (single-voice narration);
-    an optional reference clip enables zero-shot voice cloning.
+    and runs the published ``AutoProcessor``/``AutoModel`` workflow in
+    generation mode.  The input text is wrapped as a single ``[S1]`` speaker
+    turn (single-voice narration); an optional reference clip enables zero-shot
+    voice cloning.
     """
 
     def __init__(self) -> None:
@@ -186,9 +189,8 @@ class MOSSTTSDAdapter:
             voice: Optional path to a reference audio clip for zero-shot voice
                    cloning.  When omitted, the model generates with its own
                    voice (single-voice narration — the dialogue-model mismatch
-                   noted above).
-            prompt_text: Optional transcript of the reference clip; used with
-                         ``voice`` to anchor the cloned voice.
+                   noted above). The clip is attached to the user message's
+                   ``reference`` and the processor encodes it itself.
             language: ISO 639-1 code (e.g. ``"it"``, ``"en"``) or ``"auto"``.
                       MOSS-TTSD auto-detects the language from the text, so this
                       value is validated and defaulted to Italian but is **not**
@@ -211,7 +213,6 @@ class MOSSTTSDAdapter:
         self._resolve_language(kwargs.get("language"))
 
         reference_wav: str | None = kwargs.get("voice") or None
-        prompt_text: str | None = kwargs.get("prompt_text") or None
         max_new_tokens = int(kwargs.get("max_new_tokens", _DEFAULT_MAX_NEW_TOKENS))
 
         dialogue_text = self._as_single_speaker(text)
@@ -219,7 +220,6 @@ class MOSSTTSDAdapter:
         raw_audio = self._generate(
             dialogue_text=dialogue_text,
             reference_wav=reference_wav,
-            prompt_text=prompt_text,
             max_new_tokens=max_new_tokens,
         )
         return self._coerce_waveform(raw_audio)
@@ -255,42 +255,29 @@ class MOSSTTSDAdapter:
         self,
         dialogue_text: str,
         reference_wav: str | None,
-        prompt_text: str | None,
         max_new_tokens: int,
     ) -> Any:
-        """Run the continuation-style generation workflow and return raw audio.
+        """Run single-speaker generation and return the decoded raw audio.
 
-        Mirrors the published ``AutoProcessor`` / ``AutoModel`` example: build a
-        conversation (user message + optional reference/assistant prompt),
-        construct the batch in ``continuation`` mode, generate, and decode the
-        first speaker turn's waveform.
+        Single-voice narration uses the processor's **generation** mode: a
+        single ``user`` message (the model generates the assistant audio turn).
+        The processor's ``__call__`` requires generation mode to carry an odd
+        number of messages ending in a ``user`` role — a lone user message — so
+        this must *not* use ``continuation`` mode (which requires a trailing
+        ``assistant`` message and would raise). An optional reference clip is
+        attached to the user message's ``reference`` (a path); the processor
+        encodes it itself for zero-shot voice cloning.
         """
         processor = self._processor
         model = self._model
         assert processor is not None and model is not None  # guarded by caller
 
-        if reference_wav:
-            reference_codes = processor.encode_audios_from_wav(
-                [reference_wav],
-                sampling_rate=int(self._sample_rate),
-            )
-            user_text = dialogue_text
-            if prompt_text:
-                user_text = f"{self._as_single_speaker(prompt_text)} {dialogue_text}"
-            conversation = [
-                processor.build_user_message(
-                    text=user_text, reference=reference_codes
-                ),
-                processor.build_assistant_message(
-                    audio_codes_list=reference_codes
-                ),
-            ]
-        else:
-            conversation = [
-                processor.build_user_message(text=dialogue_text, reference=None),
-            ]
+        reference = [reference_wav] if reference_wav else None
+        conversation = [
+            processor.build_user_message(text=dialogue_text, reference=reference),
+        ]
 
-        batch = processor([conversation], mode="continuation")
+        batch = processor([conversation], mode="generation")
         if hasattr(batch, "to") and self._device is not None:
             batch = batch.to(self._device)
 
