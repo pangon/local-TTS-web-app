@@ -260,10 +260,16 @@ class TestXTTSV2AdapterSynthesize:
         adapter.synthesize("Testo esatto")
         assert model.synthesize.call_args.args[0] == "Testo esatto"
 
-    def test_config_passed_to_synthesize(self):
+    def test_modern_synthesize_api_no_deprecated_args(self):
+        # coqui-tts >=0.27: only `text` is positional; `config` (deprecated) is
+        # omitted and the built-in speaker uses `speaker`, not the deprecated
+        # `speaker_id`.
         adapter, model = _loaded_adapter()
         adapter.synthesize("Ciao")
-        assert model.synthesize.call_args.args[1] is adapter._config
+        assert model.synthesize.call_args.args == ("Ciao",)
+        kwargs = model.synthesize.call_args.kwargs
+        assert "speaker_id" not in kwargs
+        assert "speaker" in kwargs
 
     def test_synthesize_without_load_raises(self):
         adapter = XTTSV2Adapter()
@@ -280,14 +286,14 @@ class TestXTTSV2SpeakerHandling:
         adapter, model = _loaded_adapter()
         adapter.synthesize("Ciao")
         kwargs = model.synthesize.call_args.kwargs
-        assert kwargs["speaker_id"] == _DEFAULT_SPEAKER
+        assert kwargs["speaker"] == _DEFAULT_SPEAKER
         assert kwargs["speaker_wav"] is None
 
     def test_voice_kwarg_sets_built_in_speaker(self):
         adapter, model = _loaded_adapter()
         adapter.synthesize("Ciao", voice="Ana Florence")
         kwargs = model.synthesize.call_args.kwargs
-        assert kwargs["speaker_id"] == "Ana Florence"
+        assert kwargs["speaker"] == "Ana Florence"
         assert kwargs["speaker_wav"] is None
 
     def test_speaker_wav_triggers_cloning(self):
@@ -295,25 +301,25 @@ class TestXTTSV2SpeakerHandling:
         adapter.synthesize("Ciao", speaker_wav="/ref.wav")
         kwargs = model.synthesize.call_args.kwargs
         assert kwargs["speaker_wav"] == "/ref.wav"
-        assert kwargs["speaker_id"] is None
+        assert kwargs["speaker"] is None
 
     def test_known_speaker_validated_against_speaker_manager(self):
         speakers = {"Ana Florence": {}, "Claribel Dervla": {}}
         adapter, model = _loaded_adapter(speakers=speakers)
         adapter.synthesize("Ciao", voice="Ana Florence")
-        assert model.synthesize.call_args.kwargs["speaker_id"] == "Ana Florence"
+        assert model.synthesize.call_args.kwargs["speaker"] == "Ana Florence"
 
     def test_unknown_speaker_falls_back_to_first_available(self):
         speakers = {"Aaa Speaker": {}, "Bbb Speaker": {}}
         adapter, model = _loaded_adapter(speakers=speakers)
         adapter.synthesize("Ciao", voice="Nonexistent Person")
-        assert model.synthesize.call_args.kwargs["speaker_id"] == "Aaa Speaker"
+        assert model.synthesize.call_args.kwargs["speaker"] == "Aaa Speaker"
 
     def test_speaker_passthrough_when_manager_unavailable(self):
         # speaker_manager.speakers is a MagicMock (not a dict): pass the name through.
         adapter, model = _loaded_adapter()
         adapter.synthesize("Ciao", voice="Whoever")
-        assert model.synthesize.call_args.kwargs["speaker_id"] == "Whoever"
+        assert model.synthesize.call_args.kwargs["speaker"] == "Whoever"
 
 
 # ---------------------------------------------------------------------------

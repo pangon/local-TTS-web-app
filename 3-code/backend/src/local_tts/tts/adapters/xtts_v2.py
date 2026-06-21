@@ -37,20 +37,20 @@ Decision: DEC-default-italian-language — the default language is Italian.
    accept ``normalize=False``.
 
 .. note::
-   **Packaging / runtime.** The Coqui ``TTS`` package is a heavy dependency: the
-   original ``TTS`` (``0.22.0``, archived after Coqui AI shut down) pins an older
-   ``transformers`` / ``torch`` and does not support modern Python, while the
-   actively-maintained ``coqui-tts`` fork (idiap) runs on Python 3.10-3.12 +
-   recent PyTorch but still constrains the stack.  Either way it is mutually
-   incompatible with this repo's transformers/torch baseline
-   (``DEC-transformers-5x-baseline``), so it is **not** a backend runtime
-   dependency: ``load()`` lazy-imports it (raising a clear install hint), unit
-   tests mock it, and full-weight runtime validation against the real model is a
-   GPU-host step (the Fish S2-Pro / Qwen3-TTS precedent).  On the GPU host,
-   install it in a dedicated environment::
+   **Packaging / runtime.** Use the actively-maintained ``coqui-tts`` fork
+   (idiap) — **verified 2026-06-21 to be compatible with this backend's
+   baseline**: ``coqui-tts`` 0.27.5 requires ``transformers>=4.57`` (no upper
+   bound), ``numpy>=1.26`` and Python ``>=3.10,<3.15`` with **no torch pin**, so
+   it installs cleanly alongside transformers 4.57.3 / torch 2.10 / numpy 2.x
+   without downgrading anything.  (Only the *archived original* ``TTS`` 0.22.0
+   carries the old transformers/torch pins and needs Python <3.12.)  Because it
+   does **not** conflict (unlike qwen-tts / fish-speech), it is a **declared
+   backend dependency** — ``coqui-tts>=0.27`` in ``pyproject.toml``, like
+   ``kokoro`` / ``voxcpm`` — and ``load()`` lazy-imports it at load time (raising
+   a clear install hint if it was uninstalled); unit tests mock it.  Install /
+   reinstall it with::
 
-       pip install coqui-tts        # maintained fork; Python 3.10-3.12 + recent torch
-       # or the archived original:  pip install TTS   (Python < 3.12)
+       pip install coqui-tts        # maintained fork; transformers>=4.57, no torch pin
 """
 
 from __future__ import annotations
@@ -132,12 +132,9 @@ class XTTSV2Adapter:
         except ImportError as exc:
             raise RuntimeError(
                 "The Coqui 'TTS' package is required for coqui/XTTS-v2 but is "
-                "not installed. It pins an older transformers/torch and is "
-                "mutually incompatible with this backend's baseline "
-                "(DEC-transformers-5x-baseline), so install it in a dedicated "
-                "environment on the GPU host:\n"
-                "  pip install coqui-tts        # maintained fork (Python 3.10-3.12)\n"
-                "  # or the archived original:  pip install TTS   (Python < 3.12)\n"
+                "not installed. Install the maintained fork (compatible with this "
+                "backend's transformers/torch baseline):\n"
+                "  pip install coqui-tts\n"
                 f"(original import error: {exc})"
             ) from exc
 
@@ -197,16 +194,19 @@ class XTTSV2Adapter:
         # A reference clip (speaker_wav) takes precedence and triggers zero-shot
         # cloning; otherwise use a named built-in studio speaker.
         if speaker_wav is not None:
-            speaker_id: str | None = None
+            speaker: str | None = None
         else:
-            speaker_id = self._resolve_speaker(kwargs.get("voice") or _DEFAULT_SPEAKER)
+            speaker = self._resolve_speaker(kwargs.get("voice") or _DEFAULT_SPEAKER)
 
+        # coqui-tts >=0.27 `Xtts.synthesize` takes `speaker`/`speaker_wav`/
+        # `language` as keyword-only args; the built-in-speaker arg is `speaker`
+        # (the old `speaker_id` is deprecated) and the `config` positional is
+        # deprecated/unused, so both are omitted. Returns {"wav": <array>, …}.
         out = self._model.synthesize(
             text,
-            self._config,
+            speaker=speaker,
             speaker_wav=speaker_wav,
             language=language,
-            speaker_id=speaker_id,
         )
         return self._extract_wav(out)
 

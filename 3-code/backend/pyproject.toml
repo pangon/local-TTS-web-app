@@ -28,6 +28,13 @@ dependencies = [
     "num2words>=0.5.10",  # language-aware number/ordinal/year spelling for the preprocessing pipeline (LGPL, FOSS)
     "kokoro>=0.9.2",
     "voxcpm>=2.0.3",  # VoxCPM2 adapter (openbmb/VoxCPM2), Apache-2.0/FOSS
+    # coqui-tts (XTTS-v2 adapter, coqui/XTTS-v2): maintained fork, baseline-compatible —
+    # requires transformers>=4.57 (satisfied by the exploratory 4.57.3/5.x baseline),
+    # numpy>=1.26, NO torch / huggingface-hub pin; installs with no downgrade. Declared
+    # here (not excluded) like kokoro/voxcpm because it does NOT conflict — unlike
+    # qwen-tts/fish-speech below. Lazy-imported at load(); tests mock it. Non-FOSS weights
+    # (CPML). The ARCHIVED original `TTS` 0.22.0 is the incompatible one — use the fork.
+    "coqui-tts>=0.27",
     # NOTE: `qwen-tts` (Qwen3-TTS adapter) is deliberately NOT a runtime dependency.
     # It hard-pins transformers==4.57.3 / accelerate==1.12.0; adding it here would
     # force that exact transformers on every `pip install -e .` (prohibited by
@@ -36,16 +43,6 @@ dependencies = [
     #     pip install qwen-tts
     # (this is the exploratory-baseline-at-4.57.3 case, the inverse of the 5.x case
     # needed by MOSS-TTSD / Higgs v3). The adapter lazy-imports it; tests mock it.
-    #
-    # NOTE: the Coqui `TTS` / `coqui-tts` package (XTTS-v2 adapter) is likewise
-    # deliberately NOT a runtime dependency. It is a heavy package that pins an
-    # older transformers/torch (the original `TTS` 0.22.0 also requires Python
-    # <3.12) and is mutually incompatible with this stack's baseline
-    # (DEC-transformers-5x-baseline). It is a GPU-host dependency: install it in a
-    # dedicated environment on the GPU host —
-    #     pip install coqui-tts        # maintained fork (Python 3.10-3.12)
-    #     # or the archived original:  pip install TTS   (Python <3.12)
-    # The adapter lazy-imports it (clear install hint); tests mock it.
 ]
 
 [project.optional-dependencies]
