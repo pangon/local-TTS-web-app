@@ -63,6 +63,22 @@ license notice per ``DEC-model-license-disclosure`` (the metadata is already in
 
        pip install f5-tts
 
+   **Verified GPU-host install (2026-06-21, RTX 4070 Ti, torch 2.10+cu128).**
+   ``pip install f5-tts`` downgrades ``numpy`` 2.x → ``1.26.4`` (its py≤3.10
+   pin); this proved **harmless** here — ``voxcpm`` / ``coqui-tts`` (``TTS``) /
+   ``kokoro`` / ``torchaudio`` all still import and the full backend suite stays
+   green. One real gotcha: F5-TTS auto-transcribes the reference clip with a
+   transformers **Whisper ASR pipeline that imports ``torchcodec``**, and the
+   ``torchcodec`` pulled in transitively (``0.14``, built for CUDA 13 →
+   ``libnvrtc.so.13``) is **incompatible** with torch 2.10+cu128 (which bundles
+   ``libnvrtc.so.12``).  Install the matching build to fix it::
+
+       pip install "torchcodec==0.10.*" --index-url https://download.pytorch.org/whl/cu128
+
+   (torch 2.10 ↔ torchcodec 0.10; pick the ``cuXXX`` index matching your torch).
+   Model **load** does not need ``torchcodec`` — only the reference-clip
+   auto-transcription does (omit it by passing a ``prompt_text`` transcript).
+
 Decision: DEC-default-italian-language — the default language is Italian.
 """
 
