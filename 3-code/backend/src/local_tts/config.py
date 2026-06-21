@@ -55,3 +55,15 @@ PREPROCESSING_CONFIG_DIR: Path = Path(
 )
 
 DOMAIN_DICTIONARY_PATH: Path = PREPROCESSING_CONFIG_DIR / "domain_dictionary.json"
+
+# Temporary default reference-voice clip used by adapters that REQUIRE a reference
+# voice but have no built-in speaker (currently CosyVoice 3). Resolves to the
+# repo-root `wavs/default.mp3` (gitignored, user-provided). This is a stopgap
+# until voice selection lands (Phase 6, TASK-voice-language-selection-ui), after
+# which the per-request voice supersedes it. Override via LOCAL_TTS_DEFAULT_VOICE_PATH.
+DEFAULT_VOICE_PATH: Path = Path(
+    os.environ.get(
+        "LOCAL_TTS_DEFAULT_VOICE_PATH",
+        str(Path(__file__).resolve().parents[4] / "wavs" / "default.mp3"),
+    )
+)

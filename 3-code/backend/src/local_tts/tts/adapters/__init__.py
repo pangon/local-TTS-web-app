@@ -62,6 +62,7 @@ class ModelAdapter(Protocol):
 
 # Maps HuggingFace model ID -> concrete adapter class.
 # Each TASK-loader-* task adds its adapter here upon implementation.
+from local_tts.tts.adapters.cosyvoice3 import CosyVoice3Adapter
 from local_tts.tts.adapters.fish_s2_pro import FishS2ProAdapter
 from local_tts.tts.adapters.kokoro import KokoroAdapter
 from local_tts.tts.adapters.moss_ttsd import MOSSTTSDAdapter
@@ -99,6 +100,17 @@ _ADAPTER_REGISTRY: dict[str, type[ModelAdapter]] = {
     # named-built-in-speaker + optional reference-wav cloning; 17 langs incl.
     # Italian; 24 kHz. ⚠️ Non-FOSS weights (CPML) — license notice in the UI.
     "coqui/XTTS-v2": XTTSV2Adapter,
+    # FunAudioLLM/Fun-CosyVoice3-0.5B-2512 loads via the FunAudioLLM `cosyvoice`
+    # package's own AutoModel (not HuggingFace's). The package hard-pins
+    # transformers==4.51.3 / torch==2.3.1 / numpy==1.26.4, so — like qwen-tts /
+    # fish-speech (DEC-transformers-5x-baseline) — it is a GPU-host dependency,
+    # NOT a backend runtime dependency (it must not drive a fresh `pip install`).
+    # The adapter lazy-imports it (clear install hint), tests mock it, and
+    # full-weight runtime validation is a GPU-host step. Registered uniformly;
+    # loadability is a runtime function of the installed environment. Auto-detect
+    # language (Apache-2.0/FOSS); requires a reference voice clip (no built-in
+    # speaker); 24 kHz.
+    "FunAudioLLM/Fun-CosyVoice3-0.5B-2512": CosyVoice3Adapter,
     # bosonai/higgs-audio-v3-tts-4b is intentionally NOT registered. Boson
     # publishes v3 ONLY as a vLLM-Omni / SGLang-Omni *server* — its model card
     # shows no transformers/Python path. Its `model_type: higgs_multimodal_qwen3`

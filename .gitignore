@@ -36,3 +36,8 @@ __pycache__/
 # Root-level scratch tests only — anchored with a leading slash so component
 # test suites (e.g. 3-code/backend/tests/) are NOT ignored.
 /tests/
+
+# User-provided local default reference-voice clip (e.g. wavs/default.mp3) used
+# by reference-only adapters (CosyVoice 3) as a temporary default until voice
+# selection lands (Phase 6). Local asset, never committed.
+/wavs/
