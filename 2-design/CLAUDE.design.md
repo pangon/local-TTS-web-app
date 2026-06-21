@@ -29,6 +29,7 @@ This phase defines **how** we're building the system. Focus on architecture, dat
 | [DEC-preprocess-review-flow](decisions/DEC-preprocess-review-flow.md) | Synchronous Preprocess-then-Confirm Synthesis Flow | When modifying the preprocess/synthesis API contracts or the normalized-text review flow |
 | [DEC-model-license-disclosure](decisions/DEC-model-license-disclosure.md) | Permit Open-Weight Non-FOSS Models with Frontend License Disclosure | When adding a model to the Compatibility Table, defining model metadata, or changing the model-listing / `GET /models` contract |
 | [DEC-transformers-5x-baseline](decisions/DEC-transformers-5x-baseline.md) | Backend transformers baseline (exploratory: MOSS-TTSD needs ≥5.x; Qwen3-TTS / Fish S2-Pro need 4.57.3) | When adding a model to the Compatibility Table or choosing a model-loading library/approach (must fit the exploratory baseline — installable on 4.57.3 ⇄ 5.x) |
+| [DEC-voice-clone-prompts](decisions/DEC-voice-clone-prompts.md) | Precomputed Offline Voice-Clone Prompts for Cloning Adapters | When adding a model that clones from a precomputed prompt, or changing the prompt storage layout / offline-generation approach |
 
 ---
 
