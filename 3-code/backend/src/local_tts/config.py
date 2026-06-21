@@ -67,3 +67,16 @@ DEFAULT_VOICE_PATH: Path = Path(
         str(Path(__file__).resolve().parents[4] / "wavs" / "default.mp3"),
     )
 )
+
+# Directory holding precomputed Qwen3-TTS voice-clone prompt artifacts
+# (DEC-voice-clone-prompts). These `.pt` files are generated OFFLINE by the
+# standalone operator script `python -m local_tts.scripts.generate_voice_clone_prompt`
+# (audio + transcript → `<voice-name>.pt`) and later consumed by the Qwen3-TTS Base
+# adapter. Resolves to the repo-root `wavs/qwen3-tts/` (gitignored, under `/wavs/`).
+# Override via LOCAL_TTS_QWEN3_TTS_PROMPTS_DIR.
+QWEN3_TTS_PROMPTS_DIR: Path = Path(
+    os.environ.get(
+        "LOCAL_TTS_QWEN3_TTS_PROMPTS_DIR",
+        str(Path(__file__).resolve().parents[4] / "wavs" / "qwen3-tts"),
+    )
+)
