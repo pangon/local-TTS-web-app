@@ -26,6 +26,9 @@ inside the request path (DEC-voice-clone-prompts). The builder therefore runs
 Requires the GPU-host ``qwen-tts`` package (transformers 4.57.3 baseline,
 DEC-transformers-5x-baseline). The Base model weights are downloaded/cached by
 HuggingFace Hub on first use.
+
+See ``3-code/backend/README.voice-clone-script.md`` for detailed usage,
+prerequisites, and troubleshooting.
 """
 
 from __future__ import annotations
