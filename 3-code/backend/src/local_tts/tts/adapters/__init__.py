@@ -67,6 +67,7 @@ from local_tts.tts.adapters.kokoro import KokoroAdapter
 from local_tts.tts.adapters.moss_ttsd import MOSSTTSDAdapter
 from local_tts.tts.adapters.qwen3_tts import Qwen3TTSAdapter
 from local_tts.tts.adapters.voxcpm2 import VoxCPM2Adapter
+from local_tts.tts.adapters.xtts_v2 import XTTSV2Adapter
 
 _ADAPTER_REGISTRY: dict[str, type[ModelAdapter]] = {
     "hexgrad/Kokoro-82M": KokoroAdapter,
@@ -89,6 +90,15 @@ _ADAPTER_REGISTRY: dict[str, type[ModelAdapter]] = {
     # exploratory to accommodate this (DEC-transformers-5x-baseline); the package
     # is a GPU-host dependency (lazy-imported in the adapter, mocked in tests).
     "fishaudio/s2-pro": FishS2ProAdapter,
+    # coqui/XTTS-v2 loads via the Coqui `TTS` / `coqui-tts` package, a heavy
+    # GPU-host dependency that pins an older transformers/torch and is mutually
+    # incompatible with this backend's baseline (DEC-transformers-5x-baseline) —
+    # so it is NOT a backend runtime dependency. The adapter lazy-imports it
+    # (clear install hint), tests mock it, and full-weight runtime validation is
+    # a GPU-host step (the Fish S2-Pro / Qwen3-TTS pattern). Translate-ISO,
+    # named-built-in-speaker + optional reference-wav cloning; 17 langs incl.
+    # Italian; 24 kHz. ⚠️ Non-FOSS weights (CPML) — license notice in the UI.
+    "coqui/XTTS-v2": XTTSV2Adapter,
     # bosonai/higgs-audio-v3-tts-4b is intentionally NOT registered. Boson
     # publishes v3 ONLY as a vLLM-Omni / SGLang-Omni *server* — its model card
     # shows no transformers/Python path. Its `model_type: higgs_multimodal_qwen3`
@@ -101,7 +111,6 @@ _ADAPTER_REGISTRY: dict[str, type[ModelAdapter]] = {
     # point re-register here. Until then the model lists with loader_available=false.
     # "bosonai/higgs-audio-v3-tts-4b": HiggsAudioV3Adapter,
     # "ResembleAI/chatterbox": ChatterboxAdapter,   # TASK-loader-chatterbox
-    # "coqui/XTTS-v2": XTTSv2Adapter,              # TASK-loader-xtts-v2
     # ... (added by adapter implementation tasks)
 }
 
