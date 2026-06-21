@@ -68,12 +68,12 @@
 | TASK-model-loader-status | Add loader_available flag to COMPATIBLE_MODELS and expose via API; disable download and load in frontend for models without an adapter | P1 | Done | [REQ-F-model-listing](../1-objectives/requirements/REQ-F-model-listing.md) | TASK-model-adapter-interface | 2026-04-11 | Spans backend + frontend |
 | TASK-loader-kokoro | Implement Kokoro-82M adapter using kokoro pip package (KPipeline) | P1 | Done | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: kokoro>=0.9.2; Italian voices: if_sara, im_nicola |
 | TASK-loader-chatterbox | Implement Chatterbox adapter using chatterbox-tts pip package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: chatterbox-tts; 23 langs incl. Italian |
-| TASK-loader-xtts-v2 | Implement XTTS-v2 adapter using Coqui TTS pip package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: TTS (Coqui); first-class Italian support |
-| TASK-loader-cosyvoice | Implement CosyVoice 3 adapter using CosyVoice repo/package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: CosyVoice; 9 langs incl. Italian |
+| TASK-loader-xtts-v2 | Implement XTTS-v2 adapter using Coqui TTS pip package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-06-21 | Phase 5.3 (moved from Phase 9 2026-06-21). Dep: TTS (Coqui); first-class Italian support. ⚠️ coqui/XTTS-v2 weights are non-FOSS (CPML); license metadata + notice already in place (Phase 5.2) |
+| TASK-loader-cosyvoice | Implement CosyVoice 3 adapter using CosyVoice repo/package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-06-21 | Phase 5.3 (moved from Phase 9 2026-06-21). Dep: CosyVoice; 9 langs incl. Italian (Apache-2.0/FOSS) |
 | TASK-loader-qwen3-tts | Implement Qwen3-TTS adapter using qwen-tts pip package | P1 | Done | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-06-20 | Dep: qwen-tts; 10 langs incl. Italian. **Adapter unregistered 2026-06-20** (`DEC-transformers-5x-baseline`): `qwen-tts` hard-pins `transformers==4.57.3`, incompatible with the `transformers>=5.5` baseline required by MOSS-TTSD/Higgs v3. The adapter module + tests are kept; re-register if a 5.x-compatible `qwen-tts` ships |
 | TASK-loader-parler-tts | Implement Parler-TTS adapter using parler-tts GitHub package | P1 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: parler-tts; 8 langs incl. Italian |
 | TASK-loader-dia | Implement Dia adapter using dia pip package or transformers>=5.x | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | English only; lower priority |
-| TASK-loader-f5-tts | Implement F5-TTS adapter using f5-tts pip package | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: f5-tts; Italian cross-lingual only |
+| TASK-loader-f5-tts | Implement F5-TTS adapter using f5-tts pip package | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-06-21 | Phase 5.3 (moved from Phase 9 2026-06-21). Dep: f5-tts; Italian cross-lingual only. ⚠️ SWivid/F5-TTS weights are non-FOSS (CC-BY-NC-4.0); license metadata + notice already in place (Phase 5.2) |
 | TASK-loader-orpheus | Implement Orpheus TTS adapter using orpheus-speech pip package | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: orpheus-speech; Italian experimental |
 | TASK-loader-zonos | Implement Zonos adapter using zonos pip package | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: zonos; Italian limited |
 | TASK-loader-fish-speech | Implement Fish Speech adapter using Fish Speech repo | P2 | Todo | [REQ-F-synthesize-audiobook](../1-objectives/requirements/REQ-F-synthesize-audiobook.md) | TASK-model-adapter-interface | 2026-04-11 | Dep: fish-speech; Italian <10K hrs training data |
@@ -274,6 +274,24 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 6. TASK-loader-fish-s2-pro
 7. TASK-loader-higgs-audio-v3
 
+### Phase 5.3: Further Italian-Capable TTS Model Adapters
+
+**Capabilities delivered:**
+- Three further TTS models enabled through the existing `ModelAdapter` abstraction (`REQ-F-synthesize-audiobook`), each registered in `COMPATIBLE_MODELS` and translating the app-layer ISO 639-1 code to its model-specific identifier (architecture § Model-Specific Loading Requirements):
+  - `coqui/XTTS-v2` — ⚠️ Coqui Public Model License (CPML; non-commercial, not FOSS); `TTS` (Coqui) package; first-class Italian
+  - `FunAudioLLM/Fun-CosyVoice3-0.5B-2512` — Apache-2.0 (FOSS); CosyVoice repo/package; 9 langs incl. Italian
+  - `SWivid/F5-TTS` — ⚠️ CC-BY-NC-4.0 (non-commercial, not FOSS); `f5-tts` package; Italian cross-lingual
+- Models progressively enabled via the `loader_available` flag as each adapter lands; the system stays functional throughout
+- License metadata and the frontend disclosure notice for these models are already in place (Phase 5.2 — `TASK-model-license-metadata` / `TASK-model-license-notice-ui`); the two non-FOSS models surface their notice per `DEC-model-license-disclosure`
+- These three were moved here from the optional Phase 9 (2026-06-21) to prioritize them ahead of the Should-have Phase 6
+
+> **Note:** This phase intentionally has **no** `TASK-phase-5.3-manual-testing` task at its end (user choice, 2026-06-21) — a deliberate exception to the usual per-phase manual-testing-readiness convention.
+
+**Tasks:**
+1. TASK-loader-xtts-v2
+2. TASK-loader-cosyvoice
+3. TASK-loader-f5-tts
+
 ### Phase 6: Voice Selection & Text Preview
 
 **Capabilities delivered:**
@@ -328,17 +346,16 @@ Defines the order in which tasks should be executed. Tasks are grouped into phas
 - Per-model adapter implementations enabling TTS inference for additional supported models beyond Kokoro
 - Models are progressively enabled as their adapters are implemented
 
+> **Note:** `TASK-loader-xtts-v2`, `TASK-loader-cosyvoice`, and `TASK-loader-f5-tts` were moved out of this phase into the new **Phase 5.3** (2026-06-21) to prioritize them.
+
 **Tasks:**
 1. TASK-loader-chatterbox
-2. TASK-loader-xtts-v2
-3. TASK-loader-cosyvoice
-4. TASK-loader-parler-tts
-5. TASK-loader-dia
-6. TASK-loader-f5-tts
-7. TASK-loader-orpheus
-8. TASK-loader-zonos
-9. TASK-loader-fish-speech
-10. TASK-loader-higgs-audio
+2. TASK-loader-parler-tts
+3. TASK-loader-dia
+4. TASK-loader-orpheus
+5. TASK-loader-zonos
+6. TASK-loader-fish-speech
+7. TASK-loader-higgs-audio
 
 ### Phase 10: Database Migrations
 
