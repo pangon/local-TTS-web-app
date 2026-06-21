@@ -65,17 +65,24 @@ class ModelAdapter(Protocol):
 from local_tts.tts.adapters.fish_s2_pro import FishS2ProAdapter
 from local_tts.tts.adapters.kokoro import KokoroAdapter
 from local_tts.tts.adapters.moss_ttsd import MOSSTTSDAdapter
+from local_tts.tts.adapters.qwen3_tts import Qwen3TTSAdapter
 from local_tts.tts.adapters.voxcpm2 import VoxCPM2Adapter
 
-# NOTE: Qwen3-TTS (Qwen3TTSAdapter) is intentionally NOT registered. Its
-# `qwen-tts` package hard-pins transformers==4.57.3, which is incompatible with
-# the transformers>=5.5 baseline required by MOSS-TTSD and Higgs Audio v3
-# (DEC-transformers-5x-baseline). The adapter module (`qwen3_tts.py`) is kept so
-# it can be re-registered if a transformers-5.x-compatible `qwen-tts` is released.
 _ADAPTER_REGISTRY: dict[str, type[ModelAdapter]] = {
     "hexgrad/Kokoro-82M": KokoroAdapter,
     "openbmb/VoxCPM2": VoxCPM2Adapter,
     "OpenMOSS-Team/MOSS-TTSD-v1.0": MOSSTTSDAdapter,
+    # Qwen3-TTS loads via the `qwen-tts` package, which requires transformers
+    # 4.57.3 (and accelerate 1.12.0). It is usable when the exploratory backend
+    # baseline is installed at transformers 4.57.3 — the version qwen-tts requires
+    # (DEC-transformers-5x-baseline). At that baseline MOSS-TTSD / Higgs v3 (which
+    # need transformers >=5.x) are not loadable at runtime; the trade-off is the
+    # inverse and reversible. The adapter is registered and lazy-imports the
+    # package (mocked in tests), mirroring the Fish S2-Pro pattern. The package is
+    # a GPU-host dependency, not a backend runtime dependency (its hard
+    # transformers pin must not silently drive a fresh `pip install -e .`).
+    # Re-registered 2026-06-21.
+    "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice": Qwen3TTSAdapter,
     # fishaudio/s2-pro loads via the GitHub-only fish-speech package, which pins
     # transformers<=4.57.3 / torch==2.8.0 — mutually exclusive with MOSS-TTSD /
     # Higgs v3 (transformers>=5.x). The backend transformers baseline is
@@ -93,7 +100,6 @@ _ADAPTER_REGISTRY: dict[str, type[ModelAdapter]] = {
     # transformers later adds native `higgs_multimodal_qwen3` support, at which
     # point re-register here. Until then the model lists with loader_available=false.
     # "bosonai/higgs-audio-v3-tts-4b": HiggsAudioV3Adapter,
-    # "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice": Qwen3TTSAdapter,  # disabled: qwen-tts pins transformers==4.57.3
     # "ResembleAI/chatterbox": ChatterboxAdapter,   # TASK-loader-chatterbox
     # "coqui/XTTS-v2": XTTSv2Adapter,              # TASK-loader-xtts-v2
     # ... (added by adapter implementation tasks)

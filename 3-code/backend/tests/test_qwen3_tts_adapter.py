@@ -328,14 +328,15 @@ class TestFlashAttentionDetection:
 # ---------------------------------------------------------------------------
 
 class TestQwen3TTSAdapterRegistry:
-    def test_qwen3_not_registered_due_to_transformers_5x(self):
-        """Qwen3-TTS is intentionally NOT registered: its `qwen-tts` package
-        hard-pins transformers==4.57.3, incompatible with the transformers>=5.5
-        baseline (DEC-transformers-5x-baseline). The adapter class is kept so it
-        can be re-registered if a 5.x-compatible `qwen-tts` is released."""
+    def test_qwen3_is_registered(self):
+        """Qwen3-TTS is registered (DEC-transformers-5x-baseline): its `qwen-tts`
+        package requires transformers 4.57.3, so it is usable when the exploratory
+        backend baseline is installed at 4.57.3 (the version qwen-tts requires).
+        The adapter is registered and lazy-imports the package (mocked in tests),
+        mirroring the Fish S2-Pro pattern."""
         from local_tts.tts.adapters import has_adapter, get_adapter
 
-        assert has_adapter("Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice") is False
-        assert get_adapter("Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice") is None
-        # The adapter class itself still implements the protocol.
-        assert isinstance(Qwen3TTSAdapter(), ModelAdapter)
+        assert has_adapter("Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice") is True
+        adapter = get_adapter("Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice")
+        assert isinstance(adapter, Qwen3TTSAdapter)
+        assert isinstance(adapter, ModelAdapter)
