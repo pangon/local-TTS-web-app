@@ -62,6 +62,7 @@ class ModelAdapter(Protocol):
 
 # Maps HuggingFace model ID -> concrete adapter class.
 # Each TASK-loader-* task adds its adapter here upon implementation.
+from local_tts.tts.adapters.fish_s2_pro import FishS2ProAdapter
 from local_tts.tts.adapters.kokoro import KokoroAdapter
 from local_tts.tts.adapters.moss_ttsd import MOSSTTSDAdapter
 from local_tts.tts.adapters.voxcpm2 import VoxCPM2Adapter
@@ -75,6 +76,12 @@ _ADAPTER_REGISTRY: dict[str, type[ModelAdapter]] = {
     "hexgrad/Kokoro-82M": KokoroAdapter,
     "openbmb/VoxCPM2": VoxCPM2Adapter,
     "OpenMOSS-Team/MOSS-TTSD-v1.0": MOSSTTSDAdapter,
+    # fishaudio/s2-pro loads via the GitHub-only fish-speech package, which pins
+    # transformers<=4.57.3 / torch==2.8.0 — mutually exclusive with MOSS-TTSD /
+    # Higgs v3 (transformers>=5.x). The backend transformers baseline is
+    # exploratory to accommodate this (DEC-transformers-5x-baseline); the package
+    # is a GPU-host dependency (lazy-imported in the adapter, mocked in tests).
+    "fishaudio/s2-pro": FishS2ProAdapter,
     # "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice": Qwen3TTSAdapter,  # disabled: qwen-tts pins transformers==4.57.3
     # "ResembleAI/chatterbox": ChatterboxAdapter,   # TASK-loader-chatterbox
     # "coqui/XTTS-v2": XTTSv2Adapter,              # TASK-loader-xtts-v2

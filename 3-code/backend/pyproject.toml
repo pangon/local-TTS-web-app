@@ -13,11 +13,15 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "torch>=2.10",
     "torchaudio>=2.10",  # must match torch major.minor — required by voxcpm
-    # transformers 5.5+ is required by the MOSS-TTSD v1.0 adapter (its remote
-    # code + companion audio tokenizer target transformers 5.x) and by the
-    # upcoming Higgs Audio v3 adapter (>=5.5). This dropped qwen-tts, which
-    # hard-pinned transformers==4.57.3 (DEC-transformers-5x-baseline).
-    "transformers>=5.5",
+    # transformers baseline is currently EXPLORATORY / in flux (DEC-transformers-5x-baseline,
+    # 2026-06-21): different priority models need mutually-exclusive majors and one
+    # environment cannot host both —
+    #   • MOSS-TTSD v1.0 / Higgs Audio v3 require transformers >=5.0 / >=5.5
+    #   • Fish Audio S2-Pro (fish-speech v2.x) hard-pins transformers <=4.57.3 (and torch==2.8.0)
+    # The pin is therefore widened so the operator can install the version the model
+    # under exploration needs (downgrade to 4.57.3 for fish-speech, upgrade to 5.x for
+    # MOSS-TTSD/Higgs). To be re-fixed to a single stable baseline later (user choice).
+    "transformers>=4.38",
     "huggingface-hub>=0.21",
     "pydub>=0.25",
     "numpy>=1.24",

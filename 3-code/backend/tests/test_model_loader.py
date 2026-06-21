@@ -390,6 +390,34 @@ class TestLoadModel:
         finally:
             _ADAPTER_REGISTRY.pop("facebook/mms-tts-eng", None)
 
+    @patch("local_tts.tts.model_loader.check_vram")
+    @patch("local_tts.tts.model_loader.scan_cache_dir")
+    def test_vram_estimate_uses_configurable_overhead_factor(
+        self, mock_scan, mock_vram, loader, monkeypatch
+    ):
+        _ADAPTER_REGISTRY["facebook/mms-tts-eng"] = _FakeAdapter
+        try:
+            mock_scan.return_value = _make_scan_result(
+                [_make_cache_repo("facebook/mms-tts-eng", 1000 * 1024 * 1024)]
+            )
+            mock_vram.return_value = VRAMCheckResult(
+                sufficient=True, required_mb=0, available_mb=8000
+            )
+
+            # Default factor 1.5 -> 1000 MB on disk * 1.5 = 1500 MB required.
+            monkeypatch.setattr("local_tts.config.VRAM_OVERHEAD_FACTOR", 1.5)
+            loader.load_model("facebook/mms-tts-eng")
+            assert mock_vram.call_args.args[0] == pytest.approx(1500.0)
+
+            # Lowered override -> 1000 MB * 1.1 = 1100 MB required.
+            loader._loaded_model_id = None
+            loader._adapter = None
+            monkeypatch.setattr("local_tts.config.VRAM_OVERHEAD_FACTOR", 1.1)
+            loader.load_model("facebook/mms-tts-eng")
+            assert mock_vram.call_args.args[0] == pytest.approx(1100.0)
+        finally:
+            _ADAPTER_REGISTRY.pop("facebook/mms-tts-eng", None)
+
     def test_skips_reload_of_same_model(self, loader):
         loader._loaded_model_id = "facebook/mms-tts-eng"
         loader._adapter = _FakeAdapter()

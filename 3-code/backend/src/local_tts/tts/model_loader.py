@@ -17,12 +17,11 @@ from typing import Callable
 import torch
 from huggingface_hub import model_info as hf_model_info, scan_cache_dir, snapshot_download
 
+from local_tts import config
 from local_tts.tts.adapters import ModelAdapter, get_adapter, has_adapter
 from local_tts.tts.gpu_validator import check_vram
 
 logger = logging.getLogger(__name__)
-
-_VRAM_OVERHEAD_FACTOR = 1.5
 
 
 @dataclass(frozen=True)
@@ -104,6 +103,15 @@ COMPATIBLE_MODELS: dict[str, ModelCatalogEntry] = {
             "Creative Commons BY-NC-SA 4.0: free for non-commercial and "
             "personal use with attribution and share-alike; commercial use is "
             "not permitted."
+        ),
+    ),
+    "fishaudio/s2-pro": ModelCatalogEntry(
+        name="Fish Audio S2-Pro (Research License, 80+ langs incl. Italian, 44.1 kHz, 12–24 GB VRAM)",
+        license="Fish Audio Research License",
+        license_is_foss=False,
+        license_notice=(
+            "Fish Audio Research License: free for research, personal and other "
+            "non-commercial use; commercial use requires a separate paid license."
         ),
     ),
     "canopylabs/orpheus-3b-0.1-ft": ModelCatalogEntry(
@@ -305,9 +313,11 @@ class ModelLoader:
         if self._loaded_model_id is not None:
             self.unload_model()
 
-        # Estimate VRAM requirement from cached model size
+        # Estimate VRAM requirement from cached model size. The overhead factor
+        # is configurable (LOCAL_TTS_VRAM_OVERHEAD_FACTOR) so the guard can be
+        # tuned for a borderline model on a smaller GPU (REQ-F-gpu-validation).
         model_size_mb = self._get_cached_model_size_mb(model_id)
-        estimated_vram_mb = model_size_mb * _VRAM_OVERHEAD_FACTOR
+        estimated_vram_mb = model_size_mb * config.VRAM_OVERHEAD_FACTOR
 
         vram_result = check_vram(estimated_vram_mb)
         if not vram_result.sufficient:

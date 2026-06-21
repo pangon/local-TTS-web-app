@@ -8,7 +8,9 @@
 
 **Source**: [REQ-F-synthesize-audiobook](../../1-objectives/requirements/REQ-F-synthesize-audiobook.md), [REQ-MNT-modular-ai-layer](../../1-objectives/requirements/REQ-MNT-modular-ai-layer.md)
 
-**Last updated**: 2026-06-20
+**Last updated**: 2026-06-21
+
+> **Exploratory baseline (2026-06-21):** the baseline is currently **in flux** — see the *Exploratory baseline* subsection under **Decision**. Fish Audio S2-Pro needs `transformers<=4.57.3`, the inverse of MOSS-TTSD/Higgs v3 (`>=5.0`/`>=5.5`), and one environment cannot host both. The user chose (2026-06-21) to widen the pin and flip the installed `transformers` per the model under exploration, to be re-fixed to a single stable baseline later.
 
 ## Context
 
@@ -18,6 +20,8 @@ The backend originally pinned `transformers>=4.38` (installed 4.57.3). Two prior
 - **Higgs Audio v3** (`bosonai/higgs-audio-v3-tts-4b`, a later Phase 5.2 task): custom architecture native in **transformers>=5.5**.
 
 The `qwen-tts` package (the Qwen3-TTS adapter's dependency) hard-pins `transformers==4.57.3`, and `0.1.1` is its latest release — there is no 5.x-compatible version. So the backend cannot host both the transformers-5.x models and `qwen-tts` in one environment. The user chose (2026-06-20) to move the backend baseline to transformers 5.x and drop the Qwen3-TTS adapter rather than forgo MOSS-TTSD / Higgs v3.
+
+**Update (2026-06-21) — the inverse conflict surfaced.** Fish Audio S2-Pro (`fishaudio/s2-pro`, `TASK-loader-fish-s2-pro`) loads only via the **GitHub-only** `fish-speech` v2.0.0 package (PyPI carries only a stale `0.1.0` placeholder), which **hard-pins `transformers<=4.57.3` and `torch==2.8.0`** — the exact opposite of MOSS-TTSD/Higgs v3 (`transformers>=5.0`/`>=5.5`). A single environment cannot satisfy both. The user is in an **exploratory phase** and chose to flip the baseline per the model being tried (rather than isolate environments or defer S2-Pro), to be re-stabilized later.
 
 ## Decision
 
@@ -29,6 +33,16 @@ The backend baseline is **`transformers>=5.5`** (covers MOSS-TTSD ≥5.0 and Hig
 
 Remote-code adapters built on transformers must follow the `trust_remote_code` hardening recorded in the backend component doc: prefer pinning the model repo `revision` (except where the loader forwards `revision` into a different-repo sub-component — MOSS-TTSD propagates it to its companion codec, so it loads at HEAD), and bridge any renamed transformers symbols defensively (e.g. MOSS-TTSD's `_install_transformers_compat`, a no-op on 5.x).
 
+### Exploratory baseline (2026-06-21)
+
+Because Fish Audio S2-Pro requires `transformers<=4.57.3` (and `torch==2.8.0`) — the inverse of MOSS-TTSD/Higgs v3 — and one environment cannot host both, the baseline is **temporarily exploratory** during Phase 5.2 model trials:
+
+- **`pyproject.toml` widens the pin to `transformers>=4.38`** (no upper bound) so the operator can install whichever major the model under exploration needs. A fresh `pip install` resolves to the latest 5.x (which keeps MOSS-TTSD/Higgs/VoxCPM2/Kokoro runnable); the operator manually downgrades to `4.57.3` when exercising Fish S2-Pro.
+- **Currently installed: `transformers==4.57.3` + `huggingface-hub==0.36.2`** (downgraded 2026-06-21 to be fish-speech-compatible). The full backend suite (766 tests) passes on both 4.57.3 and 5.12.1; `torch` stays at 2.10.0 (fish-speech itself is **not** installed here — see below).
+- **Runtime trade-off:** under a 4.x install, **MOSS-TTSD v1.0 and Higgs Audio v3 cannot load at runtime** (they need ≥5.0/≥5.5). Their adapters remain *registered* (`loader_available=true`) because the adapter modules import fine and their unit tests are mocked — the incompatibility is a documented runtime consequence of the exploratory baseline, not an install conflict, and it reverses when the install returns to 5.x. (Contrast Qwen3-TTS, which is *unregistered* because its `qwen-tts` package cannot even be co-installed.)
+- **fish-speech is a GPU-host dependency, not a backend runtime dependency:** it is GitHub-only, pins `torch==2.8.0` (conflicts with this repo's `torch>=2.10` and VoxCPM2's `torchcodec`), and needs 12–24 GB VRAM. The Fish S2-Pro adapter lazy-imports it (raising a clear install hint), unit tests mock it, and full-weight runtime validation is a GPU-host step (the MOSS-TTSD precedent). On the GPU host, install it in a **dedicated environment** (`git clone … fish-speech && pip install -e .`).
+- This state is to be **re-fixed to a single stable baseline later** (user choice). When it is, this subsection and the `pyproject` pin should be reconciled.
+
 ## Enforcement
 
 ### Trigger conditions
@@ -38,8 +52,8 @@ Remote-code adapters built on transformers must follow the `trust_remote_code` h
 
 ### Required patterns
 
-- `pyproject.toml` keeps `transformers>=5.5`. New TTS-model packages must be compatible with transformers 5.x (no hard pin to a 4.x release).
-- A model package that conflicts with the transformers-5.x baseline is not added as a runtime dependency; if its adapter exists it is left **unregistered** with a code comment explaining the conflict.
+- While the baseline is exploratory (2026-06-21), `pyproject.toml` keeps the widened pin `transformers>=4.38` and the operator installs the major required by the model under exploration. (When re-stabilized, restore a single bound such as `transformers>=5.5`.)
+- A package whose dependency pins **cannot be co-installed** with the rest of the runtime stack (e.g. `qwen-tts` pinning `transformers==4.57.3`; `fish-speech` pinning `torch==2.8.0`) is **not** added as a backend runtime dependency. Its adapter may still be **registered** if it lazy-imports the package and the package is a GPU-host dependency (Fish S2-Pro); it is **unregistered** only when its mere presence would break the shared environment (Qwen3-TTS). Either way, add a code comment explaining the conflict.
 
 ### Required checks
 
@@ -48,6 +62,6 @@ Remote-code adapters built on transformers must follow the `trust_remote_code` h
 
 ### Prohibited patterns
 
-- Re-adding `qwen-tts` (or any package that pins `transformers==4.57.3` / `<5`) to the runtime dependencies while the 5.x baseline stands.
-- Registering an adapter whose package is incompatible with transformers 5.x.
-- Downgrading `transformers` below 5.5 (would break MOSS-TTSD and Higgs v3).
+- Adding any package that **hard-pins** `transformers` (e.g. `qwen-tts` → `==4.57.3`) or `torch` (e.g. `fish-speech` → `==2.8.0`) as a backend **runtime** dependency — it would force-downgrade the shared stack. Such packages stay GPU-host-only and are lazy-imported.
+- Silently editing `REQ-COMP-foss-only` or the objectives to accommodate a model.
+- (While exploratory) leaving the installed `transformers` mismatched with the model actually being tested without noting it — record the current installed major in this decision's *Exploratory baseline* subsection. Once re-stabilized, downgrading below the chosen stable floor again becomes prohibited.
