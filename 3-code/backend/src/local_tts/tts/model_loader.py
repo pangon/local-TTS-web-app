@@ -85,6 +85,19 @@ COMPATIBLE_MODELS: dict[str, ModelCatalogEntry] = {
         license="Apache-2.0",
         license_is_foss=True,
     ),
+    "bosonai/higgs-audio-v3-tts-4b": ModelCatalogEntry(
+        name=(
+            "Higgs Audio v3 TTS 4B (Research/Non-Commercial License, "
+            "102 langs incl. Italian, 24 kHz, ~9.3 GB)"
+        ),
+        license="Boson Higgs Audio v3 Research and Non-Commercial License",
+        license_is_foss=False,
+        license_notice=(
+            "Boson Higgs Audio v3 Research and Non-Commercial License: free for "
+            "research, personal and other non-commercial use; production, hosted "
+            "APIs or revenue-generating use require a separate paid license."
+        ),
+    ),
     "coqui/XTTS-v2": ModelCatalogEntry(
         name="XTTS-v2 (MPL-2.0/CPML, 17 langs, first-class Italian)",
         license="Coqui Public Model License (CPML)",

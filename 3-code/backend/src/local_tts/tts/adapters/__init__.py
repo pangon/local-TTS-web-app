@@ -82,6 +82,17 @@ _ADAPTER_REGISTRY: dict[str, type[ModelAdapter]] = {
     # exploratory to accommodate this (DEC-transformers-5x-baseline); the package
     # is a GPU-host dependency (lazy-imported in the adapter, mocked in tests).
     "fishaudio/s2-pro": FishS2ProAdapter,
+    # bosonai/higgs-audio-v3-tts-4b is intentionally NOT registered. Boson
+    # publishes v3 ONLY as a vLLM-Omni / SGLang-Omni *server* — its model card
+    # shows no transformers/Python path. Its `model_type: higgs_multimodal_qwen3`
+    # is absent from transformers (released 5.12.1 and main) and the HF repo ships
+    # no remote code (no auto_map / *.py), so `trust_remote_code` can't help and
+    # it cannot be loaded in-process under DEC-single-process (verified 2026-06-21
+    # against the runtime "does not recognize this architecture" failure). The
+    # adapter module (`higgs_audio_v3.py`) + tests are kept on the bet that
+    # transformers later adds native `higgs_multimodal_qwen3` support, at which
+    # point re-register here. Until then the model lists with loader_available=false.
+    # "bosonai/higgs-audio-v3-tts-4b": HiggsAudioV3Adapter,
     # "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice": Qwen3TTSAdapter,  # disabled: qwen-tts pins transformers==4.57.3
     # "ResembleAI/chatterbox": ChatterboxAdapter,   # TASK-loader-chatterbox
     # "coqui/XTTS-v2": XTTSv2Adapter,              # TASK-loader-xtts-v2
